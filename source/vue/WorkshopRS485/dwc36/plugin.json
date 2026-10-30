@@ -1,0 +1,40 @@
+{
+  "id": "WorkshopRS485",
+  "name": "RS485 Devices",
+  "author": "jhonf441",
+  "version": "2.6.5",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jhonf441/WorkshopRS485",
+  "tags": [
+    "rs485",
+    "modbus",
+    "servo"
+  ],
+  "dwcVersion": "3.6",
+  "dwcDependencies": [
+    "WorkshopService"
+  ],
+  "sbcRequired": true,
+  "sbcDsfVersion": "3",
+  "sbcExecutable": "main.py",
+  "sbcExecutableArguments": "",
+  "sbcAutoRestart": true,
+  "sbcOutputRedirected": true,
+  "sbcPermissions": [
+    "commandExecution",
+    "codeInterceptionReadWrite",
+    "objectModelReadWrite",
+    "fileSystemAccess",
+    "registerHttpEndpoints",
+    "networkAccess"
+  ],
+  "sbcPythonDependencies": [
+    "pyserial>=3.5"
+  ],
+  "sbcPluginDependencies": [
+    "WorkshopService"
+  ],
+  "data": {
+    "rs485": null
+  }
+}
