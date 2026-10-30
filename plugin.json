@@ -2,7 +2,7 @@
   "id": "WorkshopRS485",
   "name": "RS485 Devices",
   "author": "jhonf441",
-  "version": "2.6.5",
+  "version": "2.6.6",
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/jhonf441/WorkshopRS485",
   "tags": [
@@ -10,12 +10,12 @@
     "modbus",
     "servo"
   ],
-  "dwcVersion": "3.7",
+  "dwcVersion": "3.6",
   "dwcDependencies": [
     "WorkshopService"
   ],
   "sbcRequired": true,
-  "sbcDsfVersion": "3",
+  "sbcDsfVersion": "3.6",
   "sbcExecutable": "main.py",
   "sbcExecutableArguments": "",
   "sbcAutoRestart": true,
@@ -36,5 +36,37 @@
   ],
   "data": {
     "rs485": null
-  }
+  },
+  "sdFiles": [
+    "sys/workshop/macros/rs485-read.g"
+  ],
+  "dsfFiles": [
+    "bus.py",
+    "detection.py",
+    "diagnosis.py",
+    "i18n/en.json",
+    "i18n/es.json",
+    "ipc_stats.py",
+    "main.py",
+    "message_data.py",
+    "messages.py",
+    "profiles/__init__.py",
+    "profiles/generic.py",
+    "profiles/profile_json.py",
+    "profiles/t3d.py",
+    "profiles/t3d_alarms.py",
+    "profiles/t3d_es.py",
+    "profiles/t3d_help.py",
+    "profiles/t3d_params.py",
+    "profiles/t3d_states.py",
+    "publish_ops.py",
+    "rs485_access.py",
+    "workshop_api.py"
+  ],
+  "dwcFiles": [
+    "css/WorkshopRS485.63b29828.css",
+    "css/WorkshopRS485.63b29828.css.gz",
+    "js/WorkshopRS485.2e84de02.js",
+    "js/WorkshopRS485.2e84de02.js.gz"
+  ]
 }

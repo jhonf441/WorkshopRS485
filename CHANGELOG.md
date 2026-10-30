@@ -1,5 +1,9 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.6 -- 2026-10-30
+
+- Manifest: sbcRequired true (needs WorkshopService); side bar keeps the group names
+
 ## 2.6.5 -- 2026-10-29
 
 - Phone layout fixes (44 px touch targets, no overflow), Workbench full-screen section picker, clamps hint, interrupted jobs off the table, Machine scale label
