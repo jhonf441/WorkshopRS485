@@ -20,7 +20,7 @@
 
 import Vue from 'vue'
 import Chart from 'chart.js'
-import 'chartjs-plugin-zoom'
+import { zoomPlugins } from './zoom-plugin.js' // the zoom plugin only for the charts of this component (see zoom-plugin.js)
 import Hammer from 'hammerjs'
 import { ts } from './shared-t.js'
 import { withGaps, timeRange, formatValue, linearRange } from './chart-data.js'
@@ -687,7 +687,7 @@ export default {
 				// scale._ticksToDraw (that one IS read by _computeLabelItems) and
 				// delete the scale._labelItems cache so it is recomputed
 				// with the already corrected labels before painting.
-				plugins: [{
+				plugins: [...zoomPlugins(), {
 					beforeUpdate: ci => {
 						this.reassertAxes(ci);
 						this.recomputeYRange(ci);

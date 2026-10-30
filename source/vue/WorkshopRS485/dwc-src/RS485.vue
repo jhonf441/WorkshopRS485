@@ -17,8 +17,7 @@
 		<v-alert v-if="backendDown" density="compact" variant="tonal" type="warning" class="mb-3">
 			{{ $t('plugins.WorkshopRS485.rS485.the_plugin_service_isn_t_responding') }}
 		</v-alert>
-		<v-card class="mb-3">
-			<v-card-text>
+		<div class="mb-3">
 				<div class="st-layout">
 				<side-tabs v-model="tab" :items="tabItems" />
 				<div class="st-body">
@@ -257,8 +256,7 @@
 				</v-tabs-window>
 				</div>
 				</div>
-			</v-card-text>
-		</v-card>
+		</div>
 
 		<device-editor
 			v-model="dialog" :initial="formInitial" :newItem="editingNew"

@@ -125,7 +125,8 @@ export default {
 /* STRUCTURE only (layout, widths, folding, wrapping). The look (colors, text, lines, hover, active mark) is design/family.css. */
 .st-layout { display: flex; gap: 14px; align-items: flex-start; }
 .st-body { flex: 1 1 auto; min-width: 0; }
-.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; }
+/* sticky and taller than the window (Machine has 16 items): it scrolls inside, so the last ones can always be reached */
+.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .sidetabs.st-collapsed { width: 52px; }
 .sidetabs .st-head { display: flex; align-items: center; justify-content: space-between; }
 .sidetabs.st-collapsed .st-head { flex-direction: column-reverse; justify-content: center; }
@@ -148,7 +149,7 @@ export default {
 @media (max-width: 900px) {
 	.st-layout { flex-direction: column; gap: 8px; align-items: stretch; }
 	.st-body { width: 100%; }
-	.sidetabs, .sidetabs.st-collapsed { position: static; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
+	.sidetabs, .sidetabs.st-collapsed { position: static; max-height: none; overflow-y: visible; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
 	.sidetabs .st-fold { display: none; }
 	/* in the row layout the group name goes before its tabs, so "Configure" is still there */
 	.sidetabs.sidetabs .st-group, .sidetabs.st-collapsed .st-group { display: inline-flex; align-items: center; flex: none; padding: 0 8px 0 6px; margin: 0; border-top: 0; text-align: left; overflow: visible; }
