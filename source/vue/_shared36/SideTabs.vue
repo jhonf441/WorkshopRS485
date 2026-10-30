@@ -144,14 +144,14 @@ export default {
 .sidetabs.st-collapsed .st-label, .sidetabs.st-collapsed .st-badge { display: none; }
 .sidetabs.st-collapsed .st-item { justify-content: center; padding: 6px 0; }
 /* the name of the group stays readable when folded (short, small): "Operate" / "Configure" */
-.sidetabs.st-collapsed .st-group { font-size: 9px; line-height: 1.1; padding: 8px 2px 2px; margin: 4px 0 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidetabs.st-collapsed .st-group { line-height: 1.1; padding: 8px 2px 2px; margin: 4px 0 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 900px) {
 	.st-layout { flex-direction: column; gap: 8px; align-items: stretch; }
 	.st-body { width: 100%; }
 	.sidetabs, .sidetabs.st-collapsed { position: static; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
 	.sidetabs .st-fold { display: none; }
 	/* in the row layout the group name goes before its tabs, so "Configure" is still there */
-	.sidetabs.sidetabs .st-group, .sidetabs.st-collapsed .st-group { display: inline-flex; align-items: center; flex: none; padding: 0 8px 0 6px; margin: 0; border-top: 0; font-size: 11px; text-align: left; overflow: visible; }
+	.sidetabs.sidetabs .st-group, .sidetabs.st-collapsed .st-group { display: inline-flex; align-items: center; flex: none; padding: 0 8px 0 6px; margin: 0; border-top: 0; text-align: left; overflow: visible; }
 	.sidetabs .st-item, .sidetabs.st-collapsed .st-item { width: auto; flex: none; border-left: none; border-bottom: 2px solid transparent; justify-content: flex-start; padding: 6px 12px; }
 	.sidetabs.st-collapsed .st-label { display: block; }
 }
