@@ -248,6 +248,9 @@ import AlarmsT3d from './AlarmsT3d.vue'
 import HistoryT3d from './HistoryT3d.vue'
 import MachineProfile from './MachineProfile.vue'
 import { action, info, deleted, states, does, textOf, canMixin } from './api.js'
+import { exchangeExportJson } from './data-exchange-ui.js'
+import { ts } from './shared-t.js'
+import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData } from './device-exchange.js'
 
 const HIST = 300;
 const PLEGADOS = 'workshopRS485Collapsed';
@@ -485,16 +488,11 @@ export default {
 			this.busy = 'export';
 			try {
 				const p = await action(this.sendCode, this.cfg.id, 'export_profile');
-				const e = p.device || {};
-				const nombre = ([e.mark, e.model].filter(Boolean).join('-') || this.cfg.name || this.cfg.id).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
-				const url = URL.createObjectURL(new Blob([JSON.stringify(p, null, 2) + '\n'], { type: 'application/json' }));
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = (nombre || 'device') + '.rs485.json';
-				document.body.appendChild(a);
-				a.click();
-				a.remove();
-				setTimeout(() => URL.revokeObjectURL(url), 2000);
+				// the profile as a file of the exchange standard (envelope workshop-rs485-device)
+				const r = exchangeExportJson({ format: DEVICE_FORMAT, version: DEVICE_VERSION, plugin: DEVICE_PLUGIN, data: deviceData(p), model: this.$store.state.machine.model });
+				if (!r.ok) {
+					throw new Error(ts('exchange_export_failed'));
+				}
 			} catch (err) {
 				this.result = i18n.t('plugins.WorkshopRS485.device.could_not_export', { error: err.message });
 				this.resultError = true;

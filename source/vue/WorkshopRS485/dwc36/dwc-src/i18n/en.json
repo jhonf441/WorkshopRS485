@@ -296,13 +296,25 @@
 		"bus_mismatch": "The profile says the device comes at {wants} and this bus is at {has}: change one of them so they understand each other.",
 		"profile_applied": "{origin}. Check it and tap Save to keep it.",
 		"n_registers_kept": "The {n} registers you already had are kept.",
-		"file_over_2mb": "the file is over 2 MB",
-		"not_valid_json": "it is not valid JSON ({error})",
-		"profile_imported_from": "Profile imported from {file}",
 		"could_not_import": "Could not import: {error}",
 		"could_not_build_example": "Could not build the example: {error}",
 		"other_device_json_hint": "Another device (not a T3D servo)? Choose «Generic Modbus»: «Import JSON» appears there to load its profile file, with an example to download.",
-		"use_generic_modbus": "Use Generic Modbus"
+		"use_generic_modbus": "Use Generic Modbus",
+		"profile_noun": "device profile",
+		"profile_imported": "Profile imported",
+		"profile_row_device": "Device",
+		"profile_row_address": "Address of the new device",
+		"profile_row_parameters": "Parameters",
+		"profile_row_parameters_value": "{n} ({watched} read on every cycle)",
+		"profile_row_alarms": "Alarm codes",
+		"profile_row_register": "Register {n} (function {f})",
+		"profile_row_replaces": "(replaces yours)",
+		"profile_row_more": "and {n} more registers",
+		"profile_row_kept": "Registers you added by hand that stay",
+		"profile_row_after": "After Apply",
+		"profile_row_after_value": "It is loaded in this editor; tap Save to keep it.",
+		"profile_replaces_loaded": "It replaces the profile loaded now ({name}).",
+		"profile_empty": "The profile has no parameters and no alarm codes."
 	},
 	"statesT3d": {
 		"undocumented": "undocumented",
@@ -409,7 +421,6 @@
 		"rs485": "RS485"
 	},
 	"paramsT3d": {
-		"could_not_load": "Could not load: ",
 		"is_not_a_t3d_parameter_backup": "is not a T3D parameter backup",
 		"the_backup_matches_what_the_servo": "The backup matches what the servo has: nothing to change.",
 		"could_not_read_the_backup": "Could not read the backup: ",
@@ -501,7 +512,19 @@
 		"n_written_verified": "{n} change(s) written and verified. Test them and then save them to EEPROM.",
 		"backup_saved_on_sd": "Backup saved on the SD: {name}",
 		"could_not_delete": "Could not delete: {error}",
-		"backup_values_as_changes": "Backup of {date}: {n} different value(s) were left as changes. Check them and tap \"Write to the servo\"."
+		"backup_values_as_changes": "Backup of {date}: {n} different value(s) were left as changes. Check them and tap \"Write to the servo\".",
+		"backup_noun": "servo parameter backup",
+		"backup_entries": "Registers in the file",
+		"backup_changes": "Registers that would change",
+		"backup_after": "After Apply",
+		"backup_after_value": "The values go to the list of changes; nothing is written to the servo until you tap Write to the servo.",
+		"backup_not_a_backup": "The file has no parameters.",
+		"backup_nothing_changes": "Nothing would change: the file matches what the servo has, or holds only registers that cannot be written.",
+		"backup_other_device": "The file is from device {device}; this one is {current}.",
+		"backup_not_read": "The servo has not been read yet: every value of the file counts as a change.",
+		"backup_out_of_range": "{n} value(s) are not allowed by the manual: they will show as invalid and need the force option to be written.",
+		"backup_replaces_typed": "{n} value(s) you typed and have not written will be replaced.",
+		"backup_ignored": "{n} entries of the file are not a register of the servo or not a whole number and are ignored."
 	},
 	"machineProfile": {
 		"per_the_device": "per the device",

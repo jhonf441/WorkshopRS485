@@ -296,13 +296,25 @@
 		"bus_mismatch": "El perfil dice que el equipo viene a {wants} y este bus está a {has}: cambia uno de los dos para que se entiendan.",
 		"profile_applied": "{origin}. Revisa y toca Guardar para que quede.",
 		"n_registers_kept": "Se mantienen {n} registros que ya tenías.",
-		"file_over_2mb": "el archivo pasa de 2 MB",
-		"not_valid_json": "no es un JSON válido ({error})",
-		"profile_imported_from": "Perfil importado de {file}",
 		"could_not_import": "No se pudo importar: {error}",
 		"could_not_build_example": "No se pudo armar el ejemplo: {error}",
 		"other_device_json_hint": "¿Otro equipo (no es un servo T3D)? Elige «Modbus genérico»: ahí aparece «Importar JSON» para cargar su archivo de perfil, con un ejemplo para bajar.",
-		"use_generic_modbus": "Usar Modbus genérico"
+		"use_generic_modbus": "Usar Modbus genérico",
+		"profile_noun": "perfil de equipo",
+		"profile_imported": "Perfil importado",
+		"profile_row_device": "Equipo",
+		"profile_row_address": "Dirección del equipo nuevo",
+		"profile_row_parameters": "Parámetros",
+		"profile_row_parameters_value": "{n} ({watched} se leen en cada ciclo)",
+		"profile_row_alarms": "Códigos de alarma",
+		"profile_row_register": "Registro {n} (función {f})",
+		"profile_row_replaces": "(reemplaza el tuyo)",
+		"profile_row_more": "y {n} registros más",
+		"profile_row_kept": "Registros que agregaste a mano y se mantienen",
+		"profile_row_after": "Después de aplicar",
+		"profile_row_after_value": "Queda cargado en este editor; toca Guardar para que quede.",
+		"profile_replaces_loaded": "Reemplaza el perfil cargado ahora ({name}).",
+		"profile_empty": "El perfil no trae parámetros ni códigos de alarma."
 	},
 	"statesT3d": {
 		"undocumented": "no documentada",
@@ -409,7 +421,6 @@
 		"rs485": "RS485"
 	},
 	"paramsT3d": {
-		"could_not_load": "No se pudo cargar: ",
 		"is_not_a_t3d_parameter_backup": "no es un respaldo de parámetros del T3D",
 		"the_backup_matches_what_the_servo": "El respaldo coincide con lo que tiene el servo: no hay nada que cambiar.",
 		"could_not_read_the_backup": "No se pudo leer el respaldo: ",
@@ -501,7 +512,19 @@
 		"n_written_verified": "{n} cambio(s) escritos y verificados. Pruébalos y después guárdalos en EEPROM.",
 		"backup_saved_on_sd": "Respaldo guardado en la SD: {name}",
 		"could_not_delete": "No se pudo borrar: {error}",
-		"backup_values_as_changes": "Respaldo del {date}: {n} valor(es) distintos quedaron como cambios. Revísalos y toca \"Escribir en el servo\"."
+		"backup_values_as_changes": "Respaldo del {date}: {n} valor(es) distintos quedaron como cambios. Revísalos y toca \"Escribir en el servo\".",
+		"backup_noun": "respaldo de parámetros del servo",
+		"backup_entries": "Registros en el archivo",
+		"backup_changes": "Registros que cambiarían",
+		"backup_after": "Después de aplicar",
+		"backup_after_value": "Los valores pasan a la lista de cambios; no se escribe nada en el servo hasta que toques Escribir en el servo.",
+		"backup_not_a_backup": "El archivo no trae parámetros.",
+		"backup_nothing_changes": "No cambiaría nada: el archivo coincide con lo que tiene el servo o solo trae registros que no se pueden escribir.",
+		"backup_other_device": "El archivo es del equipo {device}; este es {current}.",
+		"backup_not_read": "Todavía no se leyó el servo: todos los valores del archivo cuentan como cambio.",
+		"backup_out_of_range": "{n} valor(es) no los permite el manual: se verán como inválidos y hace falta la opción de forzar para escribirlos.",
+		"backup_replaces_typed": "{n} valor(es) que escribiste y no has enviado serán reemplazados.",
+		"backup_ignored": "{n} entradas del archivo no son un registro del servo o no son un número entero y se ignoran."
 	},
 	"machineProfile": {
 		"per_the_device": "según el dispositivo",

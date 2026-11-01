@@ -111,12 +111,11 @@
 							{{ $t('plugins.WorkshopRS485.deviceEditor.a_json_file_with_the_device') }}
 						</div>
 						<div class="d-flex flex-wrap align-center" style="gap:8px">
-							<v-btn small outlined :loading="profileBusy === 'import'" @click="$refs.fileProfile.click()"><v-icon small left>mdi-file-import-outline</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.import_json') }}</v-btn>
+							<v-btn small outlined :loading="profileBusy === 'import'" @click="importProfile()"><v-icon small left>mdi-file-import-outline</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.import_json') }}</v-btn>
 							<v-btn small text :loading="profileBusy === 'example'" @click="exampleProfile()"><v-icon small left>mdi-file-eye-outline</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.example_t3d_servo') }}</v-btn>
 							<v-btn v-if="form.options.profile_device" small text :color="armedProfile ? 'error' : ''" @click="removeProfile()">
 								{{ armedProfile ? $t('plugins.WorkshopRS485.deviceEditor.tap_again_to_remove_it') : $t('plugins.WorkshopRS485.deviceEditor.remove_profile') }}
 							</v-btn>
-							<input ref="fileProfile" type="file" accept=".json,application/json" style="display:none" @change="importProfile">
 						</div>
 						<div v-if="form.options.profile_device" class="text-body-2 mt-2">
 							<v-icon small color="success" class="mr-1">mdi-check-circle</v-icon>{{ summaryProfile }}
@@ -178,6 +177,9 @@ import i18n from '../../i18n'
 import { mapActions } from 'vuex'
 import { BAUDS_T3D, PARITY_T3D, optionsOf, callService, canMixin } from './api.js'
 import { pathExists } from './workshop-ids.js' // the Lights plugin is optional: nothing about it when absent
+import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
+import { ts } from './shared-t.js'
+import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData, profilePlan, busMismatch, importDeviceProfile } from './device-exchange.js'
 
 function copy(o) {
 	return JSON.parse(JSON.stringify(o));
@@ -268,14 +270,8 @@ export default {
 				(pe.alarm ? ', ' + i18n.t('plugins.WorkshopRS485.deviceEditor.alarm_code_in_register', { n: pe.alarm.record }) : ', ' + i18n.t('plugins.WorkshopRS485.deviceEditor.no_alarm_register'));
 		},
 		crashBus() {
-			const e = ((this.form.options.profile_device || {}).device) || {};
-			const b = this.busSel;
-			if (!b || !e.baud) {
-				return '';
-			}
-			const asks = `${e.baud} 8${e.parity || 'N'}${e.bits_stop || 1}`;
-			const tiene = `${b.baud} 8${b.parity || 'N'}${b.bits_stop || 1}`;
-			return asks === tiene ? '' : i18n.t('plugins.WorkshopRS485.deviceEditor.bus_mismatch', { wants: asks, has: tiene });
+			const m = busMismatch(((this.form.options.profile_device || {}).device) || {}, this.busSel);
+			return m ? i18n.t('plugins.WorkshopRS485.deviceEditor.bus_mismatch', m) : '';
 		},
 		valid() {
 			const f = this.form;
@@ -309,15 +305,13 @@ export default {
 			return `${b.name || b.id} (${b.baud} 8${b.parity || 'N'}${b.bits_stop || 1})`;
 		},
 		...mapActions('machine', ['sendCode']),
+		// loads a profile the service checked into the editor (what changes: device-exchange.js profilePlan); nothing is saved until Save
 		applyProfile(r, origen) {
 			const o = this.form.options;
-			const vig = (r.options && r.options.records) || [];
-			const key = x => (x.func || 3) + '-' + x.record;
-			const del = new Set(vig.map(key));
-			// those loaded by hand that the profile does not bring stay
-			const manuales = (o.records || []).filter(x => x.record !== null && x.record !== '' && !del.has(key(x)));
+			// the registers loaded by hand that the profile does not bring stay
+			const plan = profilePlan(r, o);
 			this.$set(o, 'profile_device', r.profile);
-			this.$set(o, 'records', [...vig, ...manuales]);
+			this.$set(o, 'records', plan.records);
 			const e = r.profile.device || {};
 			if (this.newItem && e.address) {
 				this.form.address = e.address;
@@ -327,47 +321,37 @@ export default {
 			}
 			this.profileNotices = r.notices || [];
 			this.profileError = false;
-			this.profileMsg = i18n.t('plugins.WorkshopRS485.deviceEditor.profile_applied', { origin: origen }) + (manuales.length ? ' ' + i18n.t('plugins.WorkshopRS485.deviceEditor.n_registers_kept', { n: manuales.length }) : '');
+			this.profileMsg = i18n.t('plugins.WorkshopRS485.deviceEditor.profile_applied', { origin: origen }) + (plan.kept.length ? ' ' + i18n.t('plugins.WorkshopRS485.deviceEditor.n_registers_kept', { n: plan.kept.length }) : '');
 		},
-		async importProfile(ev) {
-			const f = ev.target.files && ev.target.files[0];
-			ev.target.value = '';
-			if (!f) {
-				return;
-			}
-			this.profileBusy = 'import';
-			this.profileNotices = [];
-			try {
-				if (f.size > 2 * 1024 * 1024) {
-					throw new Error(i18n.t('plugins.WorkshopRS485.deviceEditor.file_over_2mb'));
+		// import: the file is checked as a Workshop file, the service checks the profile (read only) and the person sees what would change; only when
+		// she applies it the profile goes into the editor (device-exchange.js importDeviceProfile)
+		importProfile() {
+			return importDeviceProfile({
+				exchangeImport,
+				check: data => callService(this.sendCode, { P: 'profile_check', J: data }),
+				model: this.$store.state.machine.model,
+				t: this.tp,
+				busy: on => { this.profileBusy = on ? 'import' : null; },
+				state: () => ({ options: this.form.options, newItem: this.newItem, bus: this.busSel }),
+				apply: r => this.applyProfile(r, this.tp('profile_imported')),
+				notify: (text, ok) => {
+					this.profileError = !ok;
+					this.profileMsg = text;
 				}
-				let data;
-				try {
-					data = JSON.parse(await f.text());
-				} catch (e) {
-					throw new Error(i18n.t('plugins.WorkshopRS485.deviceEditor.not_valid_json', { error: e.message }));
-				}
-				const r = await callService(this.sendCode, { P: 'profile_check', J: data });
-				this.applyProfile(r, i18n.t('plugins.WorkshopRS485.deviceEditor.profile_imported_from', { file: f.name }));
-			} catch (e) {
-				this.profileError = true;
-				this.profileMsg = i18n.t('plugins.WorkshopRS485.deviceEditor.could_not_import', { error: e.message });
-			} finally {
-				this.profileBusy = null;
-			}
+			});
 		},
+		tp(key, params) {
+			return i18n.t('plugins.WorkshopRS485.deviceEditor.' + key, params);
+		},
+		// the example (the T3D servo profile) as a file of the exchange standard, to see the format and change it for another device
 		async exampleProfile() {
 			this.profileBusy = 'example';
 			try {
 				const r = await callService(this.sendCode, { P: 'profile_example' });
-				const url = URL.createObjectURL(new Blob([JSON.stringify(r.profile, null, 2) + '\n'], { type: 'application/json' }));
-				const a = document.createElement('a');
-				a.href = url;
-				a.download = 'example-servo-T3D.rs485.json';
-				document.body.appendChild(a);
-				a.click();
-				a.remove();
-				setTimeout(() => URL.revokeObjectURL(url), 2000);
+				const out = exchangeExportJson({ format: DEVICE_FORMAT, version: DEVICE_VERSION, plugin: DEVICE_PLUGIN, data: deviceData(r.profile), model: this.$store.state.machine.model });
+				if (!out.ok) {
+					throw new Error(ts('exchange_export_failed'));
+				}
 				this.profileError = false;
 				this.profileMsg = i18n.t('plugins.WorkshopRS485.deviceEditor.the_example_was_downloaded_open_it');
 			} catch (e) {

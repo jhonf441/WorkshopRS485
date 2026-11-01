@@ -237,7 +237,10 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { i18n } from './dwc-host.js'
+import { i18n, machineModel } from './dwc-host.js'
+import { exchangeExportJson } from './data-exchange-ui.js'
+import { ts } from './shared-t.js'
+import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData } from './device-exchange.js'
 import DetailChart from './DetailChart.vue'
 import ParamsT3d from './ParamsT3d.vue'
 import StatesT3d from './StatesT3d.vue'
@@ -454,16 +457,11 @@ async function exportProfile() {
 	busy.value = 'export'
 	try {
 		const p = await action(props.cfg.id, 'export_profile')
-		const e = p.device || {}
-		const nombre = ([e.mark, e.model].filter(Boolean).join('-') || props.cfg.name || props.cfg.id).replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
-		const url = URL.createObjectURL(new Blob([JSON.stringify(p, null, 2) + '\n'], { type: 'application/json' }))
-		const a = document.createElement('a')
-		a.href = url
-		a.download = (nombre || 'device') + '.rs485.json'
-		document.body.appendChild(a)
-		a.click()
-		a.remove()
-		setTimeout(() => URL.revokeObjectURL(url), 2000)
+		// the profile as a file of the exchange standard (envelope workshop-rs485-device)
+		const r = exchangeExportJson({ format: DEVICE_FORMAT, version: DEVICE_VERSION, plugin: DEVICE_PLUGIN, data: deviceData(p), model: machineModel() })
+		if (!r.ok) {
+			throw new Error(ts('exchange_export_failed'))
+		}
 	} catch (err) {
 		result.value = i18n.t('plugins.WorkshopRS485.device.could_not_export', { error: err.message })
 		resultError.value = true

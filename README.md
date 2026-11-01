@@ -64,7 +64,7 @@ Picture 1: the orange banner with "Diagnose" and "Mark as absent", the card "Ser
 Picture 2: the second device (absent on purpose) with its profile, "Read all" and the register table; "Export profile (JSON)" at the top.
 
 #### Export profile (JSON)
-- What: exports the parameters and alarms of the device in the common format (the T3D profile is a sample for another device).
+- What: exports the parameters and alarms of the device in the common format (the T3D profile is a sample for another device), as `workshop-rs485-device-<date>-<time>.json` (see "Files this page downloads and reads").
 - Where: line under the charts of the card (red rectangle, picture 2, top).
 - How: press it to download the JSON file.
 - Watch out: it downloads a file.
@@ -80,6 +80,12 @@ Picture 2: the second device (absent on purpose) with its profile, "Read all" an
 - How: press "Read all".
 - Watch out: it only reads.
 
+#### Backups of the servo parameters (T3D)
+- What: in the Parameters tab of a T3D servo, "Backups" saves what was read to the SD (with a note), lists the backups of this servo to compare with, restore or delete, downloads the parameters as a file and loads a file as changes.
+- Where: top bar of the Parameters tab.
+- How: 1. Read all. 2. Press Backups, write a note and Save, or "Download JSON". To go back to a backup press Restore, or "Load JSON as changes" and choose a file: a window lists the registers that would change (`P-004 Control mode: 0 -> 1`), warns about another servo, values the manual does not allow and values you typed and have not written, and nothing happens until you press Apply.
+- Watch out: Restore and Load do not write to the servo: the values go to the list of pending changes and you write them with "Write to the servo"; only documented parameters that can be written are loaded.
+
 #### Read or write a register by hand
 - What: fields register, function and value with the buttons Read and Write, for any register.
 - Where: inside the device card, in the profile area (scroll down).
@@ -94,8 +100,8 @@ Picture 2: the second device (absent on purpose) with its profile, "Read all" an
 #### Add device and Add from a JSON profile
 - What: "Add device" creates a device by hand (name, bus, address, profile); "Add from a JSON profile" loads a profile file.
 - Where: bottom of the Devices entry.
-- How: 1. Press the button. 2. Fill the data or choose the file. 3. Save.
-- Watch out: a new device has no axis until you assign one.
+- How: 1. Press the button. 2. Fill the data or choose the file: a window lists the device, the parameters and alarms, the registers that will be read on every cycle (marking the ones of yours it replaces), what stays and any warning (a skipped row, a bus with another speed or format). 3. Press Apply, then Save.
+- Watch out: nothing is loaded until you press Apply and nothing is stored until Save; a new device has no axis until you assign one.
 
 ### Buses and adapters
 
@@ -224,3 +230,20 @@ Uninstalling removes the plugin folder; your data in `0:/sys/workshop/` and `/op
 
 Modbus RTU only; one master per bus; registers shown in the sample profile (ACME VFD-200) are an example: verify against the real manual before writing; a Duet-side RS485 port needs the Duet to be free.
 
+
+## Files this page downloads and reads
+
+Every file is named `<name>-<YYYYMMDD-HHMMSS>.json` (local time of the browser), UTF-8, indented with two spaces, and is a Workshop file: an envelope
+`{ "format", "version", "plugin": "WorkshopRS485", "createdAt" (ISO 8601, UTC), "machine": { "name", "board", "firmware" }, "data" }`. The page refuses
+a file of another format, plugin or version (and a bare profile written without the envelope), a file larger than 5 MB, and anything that is not JSON; a file from
+a machine with another name is still offered, with a warning. Nothing is applied from a file without a window that shows what it holds and what would change.
+
+**Device profile (`workshop-rs485-device`, version 1).** `data` is the device profile: `device` (`brand`, `model`, `baud`, `parity`, `stop_bits`, `address`, `notes`),
+`alarm_register` (`register`, `function`, `no_alarm`), `parameters` (`register`, `function`, `name`, `unit`, `scale`, `access`, `signed`, `watch`, `min`, `max`,
+`default`, `description`, `options`) and `alarms` (`code`, `text`, `cause`, `what_to_do`, `action`). Every key is optional and the service checks the profile (a bad row is
+skipped with a warning). The window of the import lists the registers that would be read on every cycle, the ones of yours that it replaces and the ones that stay. The
+example for a spindle drive is `examples/rs485/example-vfd.rs485.json`.
+
+**Servo parameters (`workshop-rs485-servo-params`, version 1).** `data` is `{ "device": "<id of the servo>", "date" (ISO 8601), "note", "params": { "<register>": <value stored in the servo> } }`: the
+registers that answered (the ones that failed or do not exist are left out). The backups the service keeps on the SD (`0:/sys/workshop/data/rs485-backups/`) hold the same
+four keys. Loading puts the documented, writable parameters whose value differs in the list of pending changes; entries that are not a register 0-255 or not a whole number are ignored.
