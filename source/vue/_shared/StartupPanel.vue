@@ -204,6 +204,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { i18n, isConnected } from './dwc-host.js'
 import { api } from './workshop-api.js'
+import { signedOut } from './workshop-auth.js'
 import { startupRows, startupSummary } from './startup.js'
 import {
 	startupExplanation, startupSteps, startupWizardStart, startupWizardMove, startupWizardSummary, startupVisible,
@@ -281,7 +282,8 @@ const allDefs = computed(() => {
 			what: 'service_what',
 			why: 'service_for',
 			ifMissing: 'service_missing',
-			texts: { missing: 'service_not_running' }
+			// signed out the service cannot be asked, so it is not said to be off: the row says the session is what is missing
+			texts: { missing: signedOut() ? 'service_sign_in' : 'service_not_running' }
 		}]
 		: []
 	return service.concat(props.defs)

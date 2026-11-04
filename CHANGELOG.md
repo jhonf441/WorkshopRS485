@@ -1,5 +1,9 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.13 -- 2026-11-04
+
+- Start-up card locked without a session; shared help tip; session chip class
+
 ## 2.6.12 -- 2026-11-03
 
 - Charts: the unit label no longer overlaps the top value of the Y axis

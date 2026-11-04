@@ -1,5 +1,5 @@
 <template>
-	<v-alert v-if="text" density="compact" variant="outlined" :type="kind === 'role' ? 'warning' : 'error'" class="mb-2 error-notice" role="alert">
+	<v-alert v-if="text" density="compact" variant="outlined" :type="kind === 'login' ? 'info' : kind === 'role' ? 'warning' : 'error'" class="mb-2 error-notice" role="alert">
 		<div class="d-flex align-center flex-wrap" style="gap:8px">
 			<span class="error-notice-text">{{ text }}</span>
 			<v-spacer />
@@ -31,6 +31,8 @@ const emit = defineEmits(['retry'])
 const kind = computed(() => errorKind(props.error))
 const text = computed(() => {
 	if (!props.error) return ''
+	// a missing sign-in is said once, by the sign-in chip of the page bar (and the session card): no second notice here
+	if (kind.value === 'login') return ''
 	if (typeof props.error === 'string') return props.error
 	return errorText(props.error, ts)
 })

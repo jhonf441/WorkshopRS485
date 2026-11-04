@@ -1,5 +1,10 @@
 {
 	"shared": {
+		"help_tip_open": "Help",
+		"help_tip_what": "What it is",
+		"help_tip_why": "What it is for",
+		"help_tip_missing": "Without it",
+		"help_tip_how": "How to use it",
 		"sidebar_pin_label": "Pin",
 		"sidebar_pin": "Keep the bar open",
 		"sidebar_unpin": "Release the bar (it folds when you choose)",
@@ -123,6 +128,8 @@
 		"startup_service": "System service (WorkshopService)",
 		"startup_service_tip": "It has to be running: it makes the examples and answers the buttons of this plugin.",
 		"startup_service_not_running": "is not running (Settings > Plugins)",
+		"startup_service_sign_in": "needs you to sign in to be checked",
+		"startup_locked": "Not signed in: sign in to create or change files from here.",
 		"startup_row_mode_fff": "\"FFF mode\" macro (macros/mode/selectfff.g)",
 		"startup_row_mode_laser": "\"Laser mode\" macro (macros/mode/selectlaser.g)",
 		"startup_row_mode_cnc": "\"CNC mode\" macro (macros/mode/selectcnc.g)",

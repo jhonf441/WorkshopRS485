@@ -30,6 +30,7 @@
 				</v-card-title>
 				<v-divider />
 				<v-card-text class="pt-4 startup-body">
+				<div v-if="locked" class="text-body-2 mb-3 startup-locked" role="status">{{ tt('locked') }}</div>
 
 		<!-- the assistant: one pending row at a time -->
 		<div v-if="wizard" class="startup-wizard">
@@ -62,7 +63,7 @@
 				<div v-if="wizard.view === 'result'" class="mt-2">
 					<div v-for="m in wizard.msgs" :key="m.key" class="text-body-2">{{ ts(m.key, m.params) }}</div>
 					<div class="d-flex flex-wrap mt-2 startup-buttons">
-						<v-btn v-if="!isApply(stepCurrent)" small @click="editPath(wizard.plan ? wizard.plan.path : destination(stepCurrent))">{{ tt('edit') }}</v-btn>
+						<v-btn v-if="!isApply(stepCurrent)" small :disabled="locked" :title="locked ? tt('locked') : undefined" @click="editPath(wizard.plan ? wizard.plan.path : destination(stepCurrent))">{{ tt('edit') }}</v-btn>
 						<v-btn small @click="refresh(false)">{{ tt('assist_recheck') }}</v-btn>
 					</div>
 				</div>
@@ -77,7 +78,7 @@
 					<div v-if="wizard.failure" class="error--text text-body-2">{{ wizard.failure }}</div>
 					<div class="d-flex flex-wrap mt-2 startup-buttons">
 						<v-btn small @click="wizard.view = 'question'; wizard.failure = null">{{ tt('back') }}</v-btn>
-						<v-btn small color="success" :disabled="wizard.writing" @click="save(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('save') }}</v-btn>
+						<v-btn small color="success" :disabled="wizard.writing || locked" @click="save(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('save') }}</v-btn>
 					</div>
 				</div>
 
@@ -103,8 +104,8 @@
 
 				<!-- a row without assistant: the example, the editor, or only the explanation -->
 				<div v-else class="mt-2 d-flex flex-wrap align-center startup-buttons">
-					<v-btn v-if="stepCurrent.file && stepCurrent.state === 'missing' && stepCurrent.exists" small color="primary" :title="tt('make_tip')" @click="create(stepCurrent)">{{ tt('make') }}</v-btn>
-					<v-btn v-else-if="stepCurrent.file && stepCurrent.state !== 'missing'" small color="primary" :title="tt('edit_tip')" @click="edit(stepCurrent)">{{ tt('edit') }}</v-btn>
+					<v-btn v-if="stepCurrent.file && stepCurrent.state === 'missing' && stepCurrent.exists" small color="primary" :disabled="locked" :title="locked ? tt('locked') : tt('make_tip')" @click="create(stepCurrent)">{{ tt('make') }}</v-btn>
+					<v-btn v-else-if="stepCurrent.file && stepCurrent.state !== 'missing'" small color="primary" :disabled="locked" :title="locked ? tt('locked') : tt('edit_tip')" @click="edit(stepCurrent)">{{ tt('edit') }}</v-btn>
 					<div v-else-if="manual(stepCurrent)" style="width: 100%">
 						<div class="text-subtitle-2 mb-1">{{ tt('manual_title') }}</div>
 						<ol class="text-body-2 startup-steps"><li v-for="s in manual(stepCurrent).steps" :key="s">{{ tt(s) }}</li></ol>
@@ -122,8 +123,8 @@
 				</div>
 
 				<div class="d-flex flex-wrap mt-3 startup-buttons startup-nav">
-					<v-btn v-if="wizard.view === 'question' && stepCurrent.def.wizard && !isApply(stepCurrent)" small color="primary" class="startup-btn" @click="viewPreview(stepCurrent)">{{ tt('preview') }}</v-btn>
-					<v-btn v-if="wizard.view === 'question' && isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="wizard.writing" @click="applyStep(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('apply_save') }}</v-btn>
+					<v-btn v-if="wizard.view === 'question' && stepCurrent.def.wizard && !isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="locked" :title="locked ? tt('locked') : undefined" @click="viewPreview(stepCurrent)">{{ tt('preview') }}</v-btn>
+					<v-btn v-if="wizard.view === 'question' && isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="wizard.writing || locked" :title="locked ? tt('locked') : undefined" @click="applyStep(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('apply_save') }}</v-btn>
 					<v-btn v-if="notUsing(stepCurrent)" small outlined class="startup-btn" :title="tt('not_using_tip')" @click="skipNotUsing(stepCurrent)">{{ tt('not_using', { name: notUsingName(stepCurrent) }) }}</v-btn>
 					<v-btn small text class="startup-btn" :title="tt('assist_pause_tip')" @click="dialog = false">{{ tt('assist_pause') }}</v-btn>
 					<v-btn v-if="wizard.est.ids.length > 1" small :disabled="wizard.est.i === 0" @click="move('previous')">{{ tt('assist_prev') }}</v-btn>
@@ -148,7 +149,7 @@
 					<li v-for="m in missingList" :key="m.id">{{ missingSentence(m) }}</li>
 				</ul>
 			</div>
-			<v-btn v-if="stepsPending.length" block large color="primary" class="mb-4 startup-btn" :title="tt('assist_tip')" @click="startWizard(null)"><v-icon small left>mdi-map-marker-path</v-icon>{{ wizard ? tt('guide_resume') : tt('guide_button') }}</v-btn>
+			<v-btn v-if="stepsPending.length" block large color="primary" class="mb-4 startup-btn" :disabled="locked" :title="locked ? tt('locked') : tt('assist_tip')" @click="startWizard(null)"><v-icon small left>mdi-map-marker-path</v-icon>{{ wizard ? tt('guide_resume') : tt('guide_button') }}</v-btn>
 
 			<v-card v-for="g in groupsShown" :key="g.id" outlined class="mb-3 startup-group" :class="'startup-g-' + g.state">
 				<div class="d-flex align-start pa-3">
@@ -164,12 +165,12 @@
 						<v-icon x-small :color="color(f.state)" class="mr-2">mdi-circle</v-icon>
 						<span class="text-body-2 flex-grow-1 startup-rowtext"><template v-if="g.rows.length > 1">{{ f.def.title || tt(f.def.label) }} - </template><span :class="'startup-text-' + f.state">{{ textState(f) }}</span></span>
 						<v-btn v-if="f.def.action && f.state !== 'configured' && f.state !== 'na'" small outlined color="primary" @click="$emit('action', f.def.action)">{{ f.def.actionText }}</v-btn>
-						<v-btn v-if="f.file && (f.state === 'configured' || f.state === 'example')" small outlined :title="tt('edit_tip')" @click="edit(f)">{{ tt('edit') }}</v-btn>
-						<v-btn v-else-if="f.file && f.state === 'missing' && f.exists && !f.def.wizard" small outlined :title="tt('make_tip')" @click="create(f)">{{ tt('make') }}</v-btn>
+						<v-btn v-if="f.file && (f.state === 'configured' || f.state === 'example')" small outlined :disabled="locked" :title="locked ? tt('locked') : tt('edit_tip')" @click="edit(f)">{{ tt('edit') }}</v-btn>
+						<v-btn v-else-if="f.file && f.state === 'missing' && f.exists && !f.def.wizard" small outlined :disabled="locked" :title="locked ? tt('locked') : tt('make_tip')" @click="create(f)">{{ tt('make') }}</v-btn>
 					</div>
 				</div>
 				<div class="d-flex align-center flex-wrap px-2 pb-2 pt-1 startup-buttons">
-					<v-btn v-if="idsWizard(g).length" color="primary" class="startup-btn" :title="tt('create_help_tip')" @click="startWizard(idsWizard(g))">{{ tt('create_help') }}</v-btn>
+					<v-btn v-if="idsWizard(g).length" color="primary" class="startup-btn" :disabled="locked" :title="locked ? tt('locked') : tt('create_help_tip')" @click="startWizard(idsWizard(g))">{{ tt('create_help') }}</v-btn>
 					<v-btn v-if="g.rows.some(f => explanation(f.def))" text small color="primary" @click="$set(explained, g.id, !explained[g.id])">{{ explained[g.id] ? tt('what_is_hide') : tt('what_is') }}</v-btn>
 					<v-spacer />
 					<v-btn text small :title="tt('hide_tip')" @click="hideGroup(g)">{{ tt('hide') }}</v-btn>
@@ -204,6 +205,8 @@
 
 import i18n from '../../i18n'
 import { api } from './workshop-api.js'
+import { signedOut } from './workshop-auth.js'
+import { roleMixin } from './role-mixin.js'
 import { startupRows, startupSummary } from './startup.js'
 import {
 	startupExplanation, startupSteps, startupWizardStart, startupWizardMove, startupWizardSummary, startupVisible,
@@ -219,6 +222,7 @@ import {
 //   filaServicio   false = no "System service" row (default: it is shown)
 //   crearAlInicio  true = asks the service for the examples that were never made (once, when the page opens)
 export default {
+	mixins: [roleMixin],
 	props: {
 		plugin: { type: String, required: true },
 		defs: { type: Array, default: () => [] },
@@ -231,6 +235,11 @@ export default {
 		return { list: null, hidden: [], open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false };
 	},
 	computed: {
+		// signed out the card can be read but nothing here creates or changes a file: each button is off and the sentence says why
+		locked() {
+			void this.identityTick
+			return signedOut()
+		},
 		// full sentence of the chip (tooltip)
 		chipHelp() {
 			const r = this.summary;
@@ -249,7 +258,8 @@ export default {
 					what: 'service_what',
 					why: 'service_for',
 					ifMissing: 'service_missing',
-					texts: { missing: 'service_not_running' }
+					// signed out the service cannot be asked, so it is not said to be off: the row says the session is what is missing
+					texts: { missing: signedOut() ? 'service_sign_in' : 'service_not_running' }
 				}]
 				: [];
 			return service.concat(this.defs);
@@ -775,4 +785,5 @@ export default {
 @media (max-width: 480px) {
 	.startup-icon-title, .startup-icon { display: none !important; }
 }
+.startup-locked { color: #ffcc80; border-left: 3px solid #ff8f00; padding: 4px 8px; background: rgba(255, 143, 0, 0.1); border-radius: 4px; }
 </style>
