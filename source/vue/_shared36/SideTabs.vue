@@ -63,6 +63,14 @@ export default {
 	data() {
 		return { collapsed: false, pinned: pinStore() };
 	},
+	mounted() {
+		this.revealActive();
+	},
+	watch: {
+		value() {
+			this.$nextTick(() => this.revealActive());
+		},
+	},
 	computed: {
 		// roving tabindex: only the chosen tab (else the first enabled one) is in the Tab order; the arrow keys move between the tabs
 		tabbable() {
@@ -82,6 +90,16 @@ export default {
 			const next = step === 'first' ? 0 : step === 'last' ? tabs.length - 1 : (at + step + tabs.length) % tabs.length;
 			ev.preventDefault();
 			tabs[next].focus();
+		},
+		// the bar scrolls inside when it is taller than the window: the chosen item is brought into view (only the bar scrolls, never the page)
+		revealActive() {
+			const nav = this.$el;
+			const on = nav && typeof nav.querySelector === 'function' ? nav.querySelector('.st-on') : null;
+			if (!on || nav.scrollHeight <= nav.clientHeight) return;
+			const top = on.offsetTop;
+			const bottom = top + on.offsetHeight;
+			if (top < nav.scrollTop) nav.scrollTop = Math.max(0, top - 40);
+			else if (bottom > nav.scrollTop + nav.clientHeight) nav.scrollTop = bottom - nav.clientHeight + 8;
 		},
 		togglePin() {
 			this.pinned = !this.pinned;
@@ -126,7 +144,14 @@ export default {
 .st-layout { display: flex; gap: 14px; align-items: flex-start; }
 .st-body { flex: 1 1 auto; min-width: 0; }
 /* sticky and taller than the window (Machine has 16 items): it scrolls inside, so the last ones can always be reached */
-.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; }
+/* the scrollbar of the bar is the thin one of the Jog (4 px, no track) and none at all on a touch screen; its colour is family.css.
+ * scrollbar-width: auto (!important) on purpose: any copy of this bar that still says `thin` (every plugin bundles its own CSS and all of them are
+ * loaded in the same page) would make Chromium ignore ::-webkit-scrollbar. */
+.sidetabs { scrollbar-width: auto !important; }
+.sidetabs::-webkit-scrollbar { width: 4px; background: transparent; }
+.sidetabs::-webkit-scrollbar-track { background: transparent; }
+@media (pointer: coarse) { .sidetabs { scrollbar-width: none !important; } .sidetabs::-webkit-scrollbar { display: none; } }
 .sidetabs.st-collapsed { width: 52px; }
 .sidetabs .st-head { display: flex; align-items: center; justify-content: space-between; }
 .sidetabs.st-collapsed .st-head { flex-direction: column-reverse; justify-content: center; }

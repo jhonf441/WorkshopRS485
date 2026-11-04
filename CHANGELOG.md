@@ -1,5 +1,9 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.12 -- 2026-11-03
+
+- Charts: the unit label no longer overlaps the top value of the Y axis
+
 ## 2.6.11 -- 2026-10-31
 
 - Lot 2: one relay client, camera client folder, single gallery, one presence helper, shared resources released at the last plugin, flash for the operator

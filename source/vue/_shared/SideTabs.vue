@@ -121,7 +121,14 @@ function choose(it, i) {
 .st-layout { display: flex; gap: 14px; align-items: flex-start; }
 .st-body { flex: 1 1 auto; min-width: 0; }
 /* sticky and taller than the window (Machine has 16 items): it scrolls inside, so the last ones can always be reached */
-.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; }
+/* the scrollbar of the bar is the thin one of the Jog (4 px, no track) and none at all on a touch screen; its colour is family.css.
+ * scrollbar-width: auto (!important) on purpose: any copy of this bar that still says `thin` (every plugin bundles its own CSS and all of them are
+ * loaded in the same page) would make Chromium ignore ::-webkit-scrollbar. */
+.sidetabs { scrollbar-width: auto !important; }
+.sidetabs::-webkit-scrollbar { width: 4px; background: transparent; }
+.sidetabs::-webkit-scrollbar-track { background: transparent; }
+@media (pointer: coarse) { .sidetabs { scrollbar-width: none !important; } .sidetabs::-webkit-scrollbar { display: none; } }
 .sidetabs.st-collapsed { width: 52px; }
 .sidetabs .st-head { display: flex; align-items: center; justify-content: space-between; }
 .sidetabs.st-collapsed .st-head { flex-direction: column-reverse; justify-content: center; }

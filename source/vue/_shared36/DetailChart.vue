@@ -566,6 +566,9 @@ export default {
 			return {
 				responsive: true,
 				maintainAspectRatio: false,
+				// the unit is a fixed label in the top-left corner (.detail-chart-unit): the plot leaves room for it, so the highest tick of
+				// the Y axis is not drawn under it (the unit and the number overlapped on every chart)
+				layout: { padding: { top: this.unit ? 22 : 0 } },
 				animation: { duration: 0 },     // tiempo real: sin animacion, no "salta"
 				legend: {
 					display: this.legend,
