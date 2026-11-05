@@ -69,7 +69,7 @@
 						<v-sheet outlined rounded class="pa-3 mb-4 detection">
 							<div class="d-flex align-center flex-wrap" style="gap:8px">
 								<v-icon :color="det.auto ? 'primary' : 'grey'">mdi-radar</v-icon>
-								<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.rS485.automatic_detection') }}</span>
+								<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.rS485.automatic_detection') }}</span><help-tip :title="ht('detection_title')" :what="ht('detection_what')" :why="ht('detection_why')" :how="ht('detection_how')" />
 								<v-spacer />
 								<v-btn small outlined color="primary" :loading="detecting.active" :disabled="detecting.active || !can('rs485.detect')" :title="lockWhy('rs485.detect')" @click="detect()">
 									<v-icon small left>mdi-magnify-scan</v-icon>{{ $t('plugins.WorkshopRS485.rS485.search_everything_now') }}
@@ -134,7 +134,7 @@
 
 						<!-- buses -->
 						<div class="section-title d-flex align-center">
-							<span><v-icon small left>mdi-serial-port</v-icon>{{ $t('plugins.WorkshopRS485.rS485.buses') }}</span>
+							<span><v-icon small left>mdi-serial-port</v-icon>{{ $t('plugins.WorkshopRS485.rS485.buses') }}</span><help-tip :title="ht('buses_title')" :what="ht('buses_what')" :why="ht('buses_why')" :how="ht('buses_how')" />
 							<v-spacer />
 							<v-btn x-small text color="primary" @click="addBus()"><v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.another_bus') }}</v-btn>
 						</div>
@@ -177,12 +177,12 @@
 									</v-btn-toggle>
 								</v-col>
 								<v-col cols="12" sm="6" v-if="b.kind !== 'duet'">
-									<v-combobox v-model="b.port" :items="optionsPort" :return-object="false" item-text="text" item-value="path" :label="$t('plugins.WorkshopRS485.rS485.adapter_port')" dense outlined hide-details />
+									<div class="help-tip-row"><v-combobox v-model="b.port" :items="optionsPort" :return-object="false" item-text="text" item-value="path" :label="$t('plugins.WorkshopRS485.rS485.adapter_port')" dense outlined hide-details /><help-tip :title="ht('port_title')" :what="ht('port_what')" :why="ht('port_why')" :how="ht('port_how')" /></div>
 								</v-col>
 								<v-col cols="12" sm="6" v-else>
 									<v-select v-model="b.port_duet" :items="[{ text: $t('plugins.WorkshopRS485.rS485.port_1_io0'), value: 1 }, { text: $t('plugins.WorkshopRS485.rS485.port_2_io1'), value: 2 }]" :label="$t('plugins.WorkshopRS485.rS485.duet_serial_port')" dense outlined hide-details />
 								</v-col>
-								<v-col cols="6" sm="3"><v-select v-model="b.baud" :items="bauds" :label="$t('plugins.WorkshopRS485.common.speed')" dense outlined hide-details /></v-col>
+								<v-col cols="6" sm="3"><div class="help-tip-row"><v-select v-model="b.baud" :items="bauds" :label="$t('plugins.WorkshopRS485.common.speed')" dense outlined hide-details /><help-tip :title="ht('baud_title')" :what="ht('baud_what')" :why="ht('baud_why')" :how="ht('baud_how')" /></div></v-col>
 								<v-col cols="6" sm="3"><v-select v-model="b.parity" :items="parities" :label="$t('plugins.WorkshopRS485.common.format')" dense outlined hide-details /></v-col>
 							</v-row>
 
@@ -207,7 +207,7 @@
 							<!-- avanzado -->
 							<v-expansion-panels flat class="mt-2 advanced">
 								<v-expansion-panel>
-									<v-expansion-panel-header class="px-0 py-1 text-caption"><span><v-icon x-small left>mdi-tune</v-icon>{{ $t('plugins.WorkshopRS485.rS485.advanced') }}</span></v-expansion-panel-header>
+									<v-expansion-panel-header class="px-0 py-1 text-caption"><span><v-icon x-small left>mdi-tune</v-icon>{{ $t('plugins.WorkshopRS485.rS485.advanced') }}</span><help-tip :title="ht('advanced_title')" :what="ht('advanced_what')" :why="ht('advanced_why')" :how="ht('advanced_how')" /></v-expansion-panel-header>
 									<v-expansion-panel-content>
 										<v-row dense>
 											<v-col cols="6" sm="3"><v-select v-model="b.bits_stop" :items="[1, 2]" :label="$t('plugins.WorkshopRS485.rS485.stop_bits')" dense outlined hide-details /></v-col>
@@ -301,11 +301,12 @@ function withDefaults(buses) {
 }
 
 import SideTabs from './SideTabs.vue'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 import { sectionColor } from './section-colors.js' // the color of each section (--wf-sec)
 
 export default {
 	mixins: [canMixin],
-	components: { PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
+	components: { HelpTip, PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
 	data() {
 		return {
 			tab: 0,
@@ -431,6 +432,9 @@ export default {
 		clearTimeout(this.armedTimer);
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.rS485.help_' + k)
+		},
 		// the fill and the text of a filled chip, readable (chip-look.js)
 		look(name) {
 			return chipLook(name);

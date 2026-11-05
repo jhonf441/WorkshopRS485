@@ -52,7 +52,7 @@
 			<template v-if="rich">
 				<div class="tiles mt-3">
 					<div class="tile" :class="{ 'tile-alarm': v.alarm }">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-alert-octagon-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.alarm') }}</div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-alert-octagon-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.alarm') }}<help-tip :title="ht('alarm_title')" :what="ht('alarm_what')" :why="ht('alarm_why')" :how="ht('alarm_how')" /></div>
 						<div class="tile-value" :class="v.alarm ? 'error--text' : (v.alarm === 0 ? 'success--text' : '')">{{ v.alarm == null ? '--' : (v.alarm ? (isT3d ? 'Err' : '') + v.alarm : $t('plugins.WorkshopRS485.common.none')) }}</div>
 						<div v-if="alarmInfo" class="tile-sub red--text text--lighten-2">{{ alarmInfo.name }}</div>
 					</div>
@@ -64,19 +64,19 @@
 						</div>
 					</template>
 					<div v-if="isT3d" class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-arm-flex-outline</v-icon>Torque</div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-arm-flex-outline</v-icon>Torque<help-tip :title="ht('torque_title')" :what="ht('torque_what')" :why="ht('torque_why')" :how="ht('torque_how')" /></div>
 						<div class="tile-value">{{ v.torque == null ? '--' : v.torque }}<small> %</small></div>
 						<v-progress-linear :value="Math.min(100, Math.abs(v.torque || 0) / (op.torque_max || 150) * 100)" height="4" rounded :color="Math.abs(v.torque || 0) > (op.torque_max || 150) * 0.8 ? 'warning' : 'success'" background-color="grey darken-3" />
 						<div class="tile-sub">{{ $t('plugins.WorkshopRS485.device.peak_and_limit', { peak: v.torque_peak == null ? '--' : v.torque_peak, max: op.torque_max }) }}</div>
 					</div>
 					<div v-if="isT3d" class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-flash-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.current') }}</div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-flash-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.current') }}<help-tip :title="ht('current_title')" :what="ht('current_what')" :why="ht('current_why')" :how="ht('current_how')" /></div>
 						<div class="tile-value">{{ v.current == null ? '--' : v.current.toFixed(1) }}<small> A</small></div>
 						<svg v-if="histCurrent.length > 1" class="mini" viewBox="0 0 100 20" preserveAspectRatio="none"><polyline :points="line(histCurrent)" fill="none" stroke="#66BB6A" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
 						<div class="tile-sub">{{ op.current_max ? $t('plugins.WorkshopRS485.device.limit') + op.current_max + ' A' : $t('plugins.WorkshopRS485.device.no_limit') }}</div>
 					</div>
 					<div class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-shield-check-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.if_it_fails') }}</div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-shield-check-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.if_it_fails') }}<help-tip :title="ht('if_fails_title')" :what="ht('if_fails_what')" :why="ht('if_fails_why')" :how="ht('if_fails_how')" /></div>
 						<div class="tile-value tile-value-small">{{ textAction }}</div>
 						<div class="tile-sub">{{ $t('plugins.WorkshopRS485.device.every_s_n_readings', { s: op.poll_s, n: live ? live.readings : 0 }) }}</div>
 					</div>
@@ -267,6 +267,7 @@ import StatesT3d from './StatesT3d.vue'
 import AlarmsT3d from './AlarmsT3d.vue'
 import HistoryT3d from './HistoryT3d.vue'
 import MachineProfile from './MachineProfile.vue'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 import { action, info, deleted, states, does, textOf, canMixin, refusal } from './api.js'
 import { exchangeExportJson } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
@@ -285,7 +286,7 @@ function readCollapsed() {
 
 export default {
 	mixins: [canMixin],
-	components: { DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
+	components: { HelpTip, DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
 	props: {
 		cfg: { type: Object, required: true },
 		live: { type: Object, default: null },
@@ -476,6 +477,9 @@ export default {
 		clearTimeout(this.expTimer);
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.device.help_' + k)
+		},
 		// the fill and the text of a filled chip, readable (chip-look.js)
 		look(name) {
 			return chipLook(name);

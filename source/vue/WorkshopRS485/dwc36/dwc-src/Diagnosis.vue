@@ -1,7 +1,8 @@
 <template>
 	<div>
-		<div class="text-caption dim mb-3">
-			{{ $t('plugins.WorkshopRS485.diagnosis.checks_each_bus_step_by_step') }}
+		<div class="text-caption dim mb-3 d-flex align-center">
+			<span>{{ $t('plugins.WorkshopRS485.diagnosis.checks_each_bus_step_by_step') }}</span>
+			<help-tip :title="ht('page_title')" :what="ht('page_what')" :why="ht('page_why')" :how="ht('page_how')" />
 		</div>
 
 		<!-- ===== un bloque por bus ===== -->
@@ -118,7 +119,7 @@
 		<v-sheet outlined rounded class="pa-3">
 			<div class="d-flex align-center flex-wrap" style="gap:8px">
 				<v-icon color="primary">mdi-radar</v-icon>
-				<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.diagnosis.search_all_addresses') }}</span>
+				<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.diagnosis.search_all_addresses') }}</span><help-tip :title="ht('sweep_title')" :what="ht('sweep_what')" :why="ht('sweep_why')" :how="ht('sweep_how')" />
 			</div>
 			<div class="text-caption dim mt-1 mb-2">
 				{{ $t('plugins.WorkshopRS485.diagnosis.asks_address_by_address_whether_anyone') }}
@@ -181,6 +182,7 @@ import i18n from '../../i18n'
 'use strict'
 
 import { callService, BAUDS_T3D, does, textOf, canMixin, refusal } from './api.js'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 
 // What each verdict says (dsf/diagnostico.py) and what to do. Fixed texts
 // so the translator finds them.
@@ -232,6 +234,7 @@ export function summaryLive(busCfg, busLive, disps, live) {
 }
 
 export default {
+	components: { HelpTip },
 	mixins: [canMixin],
 	props: {
 		cfg: Object,
@@ -303,6 +306,9 @@ export default {
 		}
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.diagnosis.help_' + k)
+		},
 		does: does,
 		textOf: textOf,
 		colorOf(code) {

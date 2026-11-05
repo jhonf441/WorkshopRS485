@@ -1,5 +1,9 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.16 -- 2026-11-05
+
+- Sign out no longer reopens the PIN dialog
+
 ## 2.6.15 -- 2026-11-04
 
 - Rebuilt with the readable text colours, the Jog scroll and resize fixes, the shared start-up card and the RS485 page for any profile

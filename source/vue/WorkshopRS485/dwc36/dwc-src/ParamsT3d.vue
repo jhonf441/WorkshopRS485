@@ -17,6 +17,7 @@
 			<v-spacer />
 			<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.search_number_name_or_word_e')" dense outlined hide-details clearable class="pt3-search" />
 			<v-btn small outlined :loading="reading" @click="readTodo()"><v-icon small left>mdi-refresh</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.read_all_again') }}</v-btn>
+			<help-tip :title="ht('read_title')" :what="ht('read_what')" :why="ht('read_why')" :how="ht('read_how')" />
 			<params-backups :disp-id="dispId" :values="values" :no-exists="noExists" :rows="rows" :edited="edited" :has-reading="hasReading" :reading="reading"
 				@compare="compareWith" @restore="applyAsChanges" @load="applyAsChanges" @message="say" />
 		</div>
@@ -109,6 +110,7 @@
 				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" :title="lockWhy('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
 					<v-icon small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.write_to_the_servo') }}
 				</v-btn>
+				<help-tip :title="ht('write_title')" :what="ht('write_what')" :why="ht('write_why')" :if-missing="ht('write_missing')" :how="ht('write_how')" />
 			</template>
 			<template v-else>
 				<div class="pt3-changes-list">
@@ -118,6 +120,7 @@
 				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" :title="lockWhy('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
 					<v-icon small left>mdi-content-save</v-icon>{{ armed ? $t('plugins.WorkshopRS485.paramsT3d.tap_again_store_in_the_servo') : $t('plugins.WorkshopRS485.paramsT3d.save_to_eeprom') }}
 				</v-btn>
+				<help-tip :title="ht('eeprom_title')" :what="ht('eeprom_what')" :why="ht('eeprom_why')" :how="ht('eeprom_how')" />
 			</template>
 		</div>
 	</div>
@@ -134,6 +137,7 @@ import { action, info, canMixin, refusal } from './api.js'
 import { TOTAL, BY_READING, three, validate } from './params-model.js'
 import ParamCard from './ParamCard.vue'
 import ParamsBackups from './ParamsBackups.vue'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 import { backupChanges } from './params-backup.js';
 
 // Values read per device: they survive closing/opening the panel (the whole
@@ -143,7 +147,7 @@ const CACHE = {};
 const tp = (key, params) => i18n.t('plugins.WorkshopRS485.paramsT3d.' + key, params);
 
 export default { mixins: [canMixin],
-	components: { ParamCard, ParamsBackups },
+	components: { HelpTip, ParamCard, ParamsBackups },
 	props: {
 		dispId: { type: String, required: true }
 	},
@@ -316,6 +320,9 @@ export default { mixins: [canMixin],
 		CACHE[this.dispId] = { values: this.values, hour: this.hourReading, written: this.written, comparing: this.comparing };
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.paramsT3d.help_' + k)
+		},
 		// the fill and the text of a filled chip, readable (chip-look.js)
 		look(name) {
 			return chipLook(name);

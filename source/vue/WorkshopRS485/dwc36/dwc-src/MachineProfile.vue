@@ -17,6 +17,7 @@
 		<template v-if="tab === 0">
 			<div class="pe-bar">
 				<v-btn small outlined :loading="reading" :disabled="!params.length" @click="readAll()"><v-icon small left>mdi-download</v-icon>{{ $t('plugins.WorkshopRS485.machineProfile.read_all') }}</v-btn>
+				<help-tip :title="ht('params_title')" :what="ht('params_what')" :why="ht('params_why')" :how="ht('params_how')" />
 				<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.machineProfile.name_register_or_word')" dense outlined hide-details clearable class="pe-search" />
 				<span v-if="msg" class="text-caption" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</span>
 			</div>
@@ -71,7 +72,8 @@
 
 		<!-- ===== alarmas ===== -->
 		<template v-else>
-			<div class="text-body-2 mb-2">
+			<div class="text-body-2 mb-2 d-flex align-center flex-wrap">
+				<help-tip :title="ht('alarms_title')" :what="ht('alarms_what')" :why="ht('alarms_why')" :how="ht('alarms_how')" />
 				<span v-if="!pe.alarm" class="warning--text">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_doesn_t_say_where') }}</span>
 				<span v-else-if="alarmCurrent" class="error--text"><v-icon small color="error" class="mr-1">mdi-alert-octagon</v-icon>{{ $t('plugins.WorkshopRS485.common.active_now') }} <b>{{ alarmCurrent }}</b></span>
 				<span v-else class="success--text"><v-icon small color="success" class="mr-1">mdi-check-circle</v-icon>{{ $t('plugins.WorkshopRS485.common.no_active_alarm') }}</span>
@@ -100,10 +102,12 @@ import i18n from '../../i18n'
 
 import { mapActions } from 'vuex'
 import { action, canMixin } from './api.js'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 
 const ACCION = { pause: i18n.t('plugins.WorkshopRS485.machineProfile.pauses_the_job'), notify: i18n.t('plugins.WorkshopRS485.common.only_warns'), nothing: i18n.t('plugins.WorkshopRS485.machineProfile.does_nothing') };
 
 export default {
+	components: { HelpTip },
 	mixins: [canMixin],
 	props: {
 		cfg: { type: Object, required: true },
@@ -171,6 +175,9 @@ export default {
 		clearTimeout(this.armedTimer);
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.machineProfile.help_' + k)
+		},
 		...mapActions('machine', ['sendCode']),
 		key(r) {
 			return r.func + '-' + r.record;

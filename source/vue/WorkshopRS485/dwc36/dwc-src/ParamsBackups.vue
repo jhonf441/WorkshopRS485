@@ -4,7 +4,7 @@
 			<v-btn small outlined v-bind="attrs" v-on="on" @click="loadBackups()"><v-icon small left>mdi-content-save-cog</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.backups') }}</v-btn>
 		</template>
 		<v-card class="pa-3">
-			<div class="text-subtitle-2">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}</div>
+			<div class="text-subtitle-2 d-flex align-center">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}<help-tip :title="ht('backups_title')" :what="ht('backups_what')" :why="ht('backups_why')" :how="ht('backups_how')" /></div>
 			<div class="d-flex align-center mt-1" style="gap:6px">
 				<v-text-field v-model.trim="noteBackup" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.note_optional_e_g_before_tuning')" dense outlined hide-details />
 				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :title="lockWhy('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
@@ -39,11 +39,13 @@ import { callService, canMixin, refusal } from './api.js'
 import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { backupData, exportBackup, importBackup, isBackup } from './params-backup.js'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 
 // The backups of the parameters of one T3D servo: the ones the service keeps on the SD (save, compare, restore, delete) and the file of the
 // exchange standard (download, load with a preview). Loading or restoring does not write to the servo: the page puts the values in its list of
 // pending changes (events `restore` and `load`); comparing shows the differences in the page (`compare`).
 export default { mixins: [canMixin],
+	components: { HelpTip },
 	props: {
 		dispId: { type: String, required: true },
 		values: { type: Object, required: true }, // what was read: { "<register>": { value } | { error } }
@@ -60,6 +62,9 @@ export default { mixins: [canMixin],
 		clearTimeout(this.armedTimer);
 	},
 	methods: {
+		ht(k) {
+			return this.$t('plugins.WorkshopRS485.paramsT3d.help_' + k)
+		},
 		...mapActions('machine', ['sendCode']),
 		tp(key, params) {
 			return i18n.t('plugins.WorkshopRS485.paramsT3d.' + key, params);
