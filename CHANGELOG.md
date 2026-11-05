@@ -1,5 +1,13 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.15 -- 2026-11-04
+
+- Rebuilt with the readable text colours, the Jog scroll and resize fixes, the shared start-up card and the RS485 page for any profile
+
+## 2.6.14 -- 2026-11-04
+
+- Text on colour reads; RS485 range-bar marks no longer float
+
 ## 2.6.13 -- 2026-11-04
 
 - Start-up card locked without a session; shared help tip; session chip class

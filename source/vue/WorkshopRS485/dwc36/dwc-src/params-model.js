@@ -32,7 +32,14 @@ export function show(p, v) {
 	if (v == null || v === '') {
 		return v
 	}
-	return p.scale && p.scale !== 1 ? (Number(v) * p.scale).toFixed(1) : v
+	return p.scale && p.scale !== 1 ? (Number(v) * p.scale).toFixed(decimalsOf(p.scale)) : v
+}
+
+// 0.1 -> 1, 0.01 -> 2, 5 -> 0 (the decimals a scale needs, at least one for the scales the servo has always had)
+export function decimalsOf(scale) {
+	const t = String(scale)
+	const i = t.indexOf('.')
+	return i < 0 ? 0 : Math.max(1, Math.min(6, t.length - i - 1))
 }
 
 export function textOption(p, v) {

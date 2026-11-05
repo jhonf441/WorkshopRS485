@@ -29,7 +29,7 @@
 			</v-btn-toggle>
 			<v-spacer />
 			<v-btn small outlined :loading="loading" @click="load()"><v-icon small left>mdi-refresh</v-icon>{{ $t('plugins.WorkshopRS485.common.refresh') }}</v-btn>
-			<v-btn small text :color="armed ? 'error' : ''" :disabled="!events.length || !can('rs485.clear_history')" @click="touchDelete()">
+			<v-btn small text :color="armed ? 'error' : ''" :disabled="!events.length || !can('rs485.clear_history')" :title="lockWhy('rs485.clear_history')" @click="touchDelete()">
 				<v-icon small left>mdi-delete-sweep</v-icon>{{ armed ? $t('plugins.WorkshopRS485.historyT3d.tap_again_to_clear') : $t('plugins.WorkshopRS485.historyT3d.clear_history') }}
 			</v-btn>
 		</div>
@@ -56,7 +56,7 @@
 					<v-chip v-if="e.duration != null" x-small outlined :title="$t('plugins.WorkshopRS485.historyT3d.time_in_fault')">
 						<v-icon x-small left>mdi-timer-outline</v-icon>{{ duration(e.duration) }}
 					</v-chip>
-					<v-chip v-else-if="e.kind === 'fault' && e.follows" x-small color="error" text-color="white">{{ $t('plugins.WorkshopRS485.historyT3d.ongoing') }}</v-chip>
+					<v-chip v-else-if="e.kind === 'fault' && e.follows" x-small color="error darken-2" text-color="white">{{ $t('plugins.WorkshopRS485.historyT3d.ongoing') }}</v-chip>
 				</div>
 			</template>
 		</div>
@@ -72,7 +72,7 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { callService, canMixin } from './api.js'
+import { callService, canMixin, refusal } from './api.js'
 
 const p2 = n => String(n).padStart(2, '0');
 
@@ -161,7 +161,7 @@ export default {
 				const r = await callService(this.sendCode, { P: 'history', I: this.dispId });
 				this.events = (r.history || []).slice();
 			} catch (e) {
-				this.msg = i18n.t('plugins.WorkshopRS485.historyT3d.could_not_read_the_history') + (e.message || e);
+				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.historyT3d.could_not_read_the_history') + (e.message || e);
 				this.msgError = true;
 			} finally {
 				this.loading = false;
@@ -184,7 +184,7 @@ export default {
 				this.msgError = false;
 				await this.load();
 			} catch (e) {
-				this.msg = i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: e.message || String(e) });
+				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: e.message || String(e) });
 				this.msgError = true;
 			}
 		},

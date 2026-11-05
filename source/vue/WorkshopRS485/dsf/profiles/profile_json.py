@@ -18,6 +18,19 @@ by hand on the page.
                    "accion" (pausar/avisar/nada)}]
     }
 
+Optional, to get the same page the T3D servo has (tabs of charts, live states, parameters by group, alarm codes and history) for
+any device (2026-11-04). The public keys are the English ones:
+
+      "groups": [{"id", "name", "description", "icon" (mdi-...), "registers": [register, ...]}]
+      parameters[]: + "group" (id of a group), "labels": ["speed", ...] (ids of the page's labels), "risk" (low/medium/high), "note"
+      "states": [{"register", "function" (3/4), "name", "unit", "scale", "signed", "group" (free text), "note",
+                  "chart" (true: it is read every cycle and charted),
+                  "options": [{"value", "text", "tone" (ok/warn/error)}]}]
+      alarm_register: + "reset_register", "reset_value" (written to clear the alarm; without them the page offers no button)
+      alarms[]: + "clear" (auto / procedure / restart: how that alarm clears)
+
+The page shows the T3D-style tabs when the profile has parameters, states or alarms; without any of them it keeps the plain list.
+
 The keys are also valid in English (device, alarm_register, parameters,
 alarms, register, name, function, unit, scale, access read/write, signed,
 watch, default, description, options, code, text, cause, what_to_do,
@@ -49,12 +62,20 @@ _IN = {
     "description": "description", "options": "options", "value": "value", "text": "text",
     # alarmas
     "code": "code", "cause": "cause", "what_to_do": "that_do", "action": "action",
+    # rich page (all optional)
+    "groups": "groups", "states": "states", "labels": "labels", "risk": "risk", "group": "group", "note": "note", "chart": "chart",
+    "icon": "icon", "registers": "registers", "reset_register": "reset_register", "reset_value": "reset_value", "clear": "clear", "tone": "tone",
 }
 _VAL_EN = {"read": "reading", "write": "write", "readwrite": "write", "read_write": "write",
            "pause": "pause", "warn": "notify", "none": "nothing"}
 ACTIONS = ("pause", "notify", "nothing")
 MAX_PARAMS = 2000
 MAX_ALARMS = 1000
+MAX_STATES = 500
+MAX_GROUPS = 100
+RISKS = ("low", "medium", "high")
+TONES = ("ok", "warn", "error")
+CLEARS = ("auto", "procedure", "restart")
 
 
 def _es(d):
@@ -149,6 +170,9 @@ def normalize(profile):
         try:
             out["alarm"] = {"record": _num(al["record"], True), "func": _num(al.get("func") or 4, True),
                              "without_alarm": _num(al.get("without_alarm") or 0, True)}
+            if al.get("reset_register") not in (None, "") and al.get("reset_value") not in (None, ""):
+                out["alarm"]["reset_register"] = _num(al["reset_register"], True)
+                out["alarm"]["reset_value"] = _num(al["reset_value"], True)
         except ValueError as e:
             notices.append(M("profile_json_alarm_problem", error=error_text(e)))
 
@@ -187,6 +211,15 @@ def normalize(profile):
             ops = [o for o in (r.get("options") or []) if isinstance(o, dict) and o.get("value") not in (None, "")]
             if ops:
                 row["options"] = [{"value": _num(o["value"]), "text": _txt(o.get("text"), 120)} for o in ops[:64]]
+            if r.get("group"):
+                row["group"] = _txt(r["group"], 40)
+            labs = [_txt(x, 40) for x in (r.get("labels") or []) if isinstance(x, str) and x.strip()][:8]
+            if labs:
+                row["labels"] = labs
+            if str(r.get("risk") or "").lower() in RISKS:
+                row["risk"] = str(r["risk"]).lower()
+            if r.get("note"):
+                row["note"] = _txt(r["note"], 500)
             params.append(row)
         except ValueError as e:
             notices.append(M("profile_json_parameter_problem", register=r.get("record", i + 1), error=error_text(e)))
@@ -214,6 +247,9 @@ def normalize(profile):
                     row[k] = _txt(a[k], 1000)
             if acc:
                 row["action"] = acc
+            clear = str(a.get("clear") or "").lower()
+            if clear in CLEARS:
+                row["clear"] = clear
             alarms.append(row)
         except ValueError as e:
             notices.append(M("profile_json_alarm_problem_n", code=a.get("code", i + 1), error=error_text(e)))
@@ -221,6 +257,67 @@ def normalize(profile):
         out["alarms"] = alarms
     if alarms and "alarm" not in out:
         notices.append(M("profile_json_alarm_table_without_register"))
+
+    groups, gids = [], set()
+    for i, g in enumerate((p.get("groups") or [])[:MAX_GROUPS]):
+        if not isinstance(g, dict):
+            notices.append(M("profile_json_group_is_not_an_object", n=i + 1))
+            continue
+        gid = _txt(g.get("id"), 40)
+        if not gid or gid in gids:
+            notices.append(M("profile_json_group_problem", group=gid or i + 1, error=M("profile_json_repeated_code") if gid else M("profile_json_the_code_is_missing")))
+            continue
+        gids.add(gid)
+        row = {"id": gid, "name": _txt(g.get("name"), 80) or gid, "description": _txt(g.get("description"), 300),
+               "icon": _txt(g.get("icon"), 60) or "mdi-cog"}
+        regs = []
+        for x in (g.get("registers") or [])[:2000]:
+            try:
+                regs.append(_num(x, True))
+            except ValueError:
+                pass
+        if regs:
+            row["registers"] = regs
+        groups.append(row)
+    if groups:
+        out["groups"] = groups
+
+    states, seen_s = [], set()
+    for i, r in enumerate((p.get("states") or [])[:MAX_STATES]):
+        if not isinstance(r, dict):
+            notices.append(M("profile_json_state_is_not_an_object", n=i + 1))
+            continue
+        try:
+            reg = _num(r.get("record"), True)
+            if reg is None or not 0 <= reg <= 65535:
+                raise ValueError(M("profile_json_the_register_is_missing"))
+            fun = _num(r.get("func") or 4, True)
+            if fun not in (3, 4):
+                raise ValueError(M("profile_json_function_only_3_or_4", function=fun))
+            if (fun, reg) in seen_s:
+                raise ValueError(M("profile_json_repeated_register"))
+            seen_s.add((fun, reg))
+            row = {"record": reg, "func": fun, "name": _txt(r.get("name"), 120) or str(M("profile_json_register_n", register=reg)),
+                   "unit": _txt(r.get("unit"), 20), "scale": _num(r.get("scale")) or 1,
+                   "with_sign": bool(r.get("with_sign")), "chart": bool(r.get("chart"))}
+            if r.get("group"):
+                row["group"] = _txt(r["group"], 60)
+            if r.get("note"):
+                row["note"] = _txt(r["note"], 500)
+            ops = []
+            for o in (r.get("options") or [])[:64]:
+                if isinstance(o, dict) and o.get("value") not in (None, ""):
+                    one = {"value": _num(o["value"]), "text": _txt(o.get("text"), 120)}
+                    if str(o.get("tone") or "").lower() in TONES:
+                        one["tone"] = str(o["tone"]).lower()
+                    ops.append(one)
+            if ops:
+                row["options"] = ops
+            states.append(row)
+        except ValueError as e:
+            notices.append(M("profile_json_state_problem", register=r.get("record", i + 1), error=error_text(e)))
+    if states:
+        out["states"] = states
     return out, notices
 
 
@@ -232,13 +329,19 @@ def a_options(profile):
              "unit": r["unit"], "with_sign": r["with_sign"], "writable": r["access"] == "write",
              "min": r.get("min", ""), "max": r.get("max", "")}
             for r in profile.get("params", []) if r.get("watch")]
+    seen = {(r["func"], r["record"]) for r in regs}
+    for s in profile.get("states", []):
+        if s.get("chart") and (s["func"], s["record"]) not in seen:
+            seen.add((s["func"], s["record"]))
+            regs.append({"name": s["name"], "record": s["record"], "func": s["func"], "scale": s["scale"],
+                         "unit": s["unit"], "with_sign": s["with_sign"], "writable": False, "min": "", "max": ""})
     return {"profile_device": profile, "records": regs}
 
 
 def since_t3d():
     """The T3D servo profile (profiles/t3d*.py) in this format: it serves as a
     complete example and for using a T3D as a generic device."""
-    from profiles import t3d, t3d_alarms, t3d_params
+    from profiles import t3d, t3d_alarms, t3d_help, t3d_params, t3d_states
     lang = messages.current_language()  # the tables are messages: the profile is written in the language of the request
 
     def loc(x):
@@ -268,6 +371,15 @@ def since_t3d():
             row["defaultValue"] = round(i["defaultValue"] * esc, 6)
         if i.get("options"):
             row["options"] = [{"value": o["value"], "text": o["text"]} for o in i["options"]]
+        h = loc(t3d_help.help_text(reg))
+        if i.get("group") and i["group"] != "others":
+            row["group"] = i["group"]
+        if h.get("labels"):
+            row["labels"] = list(h["labels"])
+        if h.get("risk"):
+            row["risk"] = h["risk"]
+        if h.get("that_does"):
+            row["description"] = h["that_does"]
         params.append(row)
     alarms = []
     for a in loc(t3d_alarms.table()):
@@ -276,14 +388,21 @@ def since_t3d():
             that += " " + a["procedure"]
         that += " (" + a["deleted_text"] + ")"
         alarms.append({"code": a["code"], "text": a["name"], "cause": a["description"],
-                        "that_do": that, "action": "pause"})
+                        "that_do": that, "action": "pause",
+                        "clear": {"si": "auto", "procedure": "procedure", "no": "restart"}.get(a["deleted"], "auto")})
     profile = {
         "format": FORMAT, "version": VERSION,
         "device": {"mark": "HLTNC", "model": "T3D (servo drive)", "baud": bauds[d.get(182, 2)] if d.get(182) is not None else 19200,
                    "parity": par, "bits_stop": bits, "address": d.get(181) or 1,
                    "notes": loc(M("profile_json_t3d_export_notes"))},
-        "alarm": {"record": t3d.REG_ALARM, "func": 4, "without_alarm": 0},
+        "alarm": {"record": t3d.REG_ALARM, "func": 4, "without_alarm": 0,
+                  "reset_register": t3d.REG_DELETE_ALARM, "reset_value": t3d.VAL_DELETE_ALARM},
+        "groups": [{"id": g, "name": loc(n), "description": loc(d), "icon": t3d_help.ICON_GROUP.get(g, "mdi-cog"), "registers": sorted(regs)}
+                   for g, n, d, regs in t3d.GROUPS],
         "params": params,
+        "states": [{"record": r, "func": 4, "name": loc(n), "unit": loc(u) if u else "", "scale": e, "with_sign": sg,
+                    "group": loc(dict(t3d_states.GROUPS)[g]), "note": loc(note), "chart": i in ("speed", "torque", "current")}
+                   for i, n, r, high, u, e, sg, g, note in t3d_states.STATES if high is None and u != "bits"],
         "alarms": alarms,
     }
     return normalize(profile)[0]

@@ -306,6 +306,14 @@ export default {
 	font-size: 12px;
 	font-variant-numeric: tabular-nums;
 }
+/* the track of the range bar: the marks (current, factory, new) are placed against it, so it must be the positioned one (this rule was left in ParamsT3d when the card was split out, and the marks floated loose over the page) */
+.pt3-bar-span {
+	position: relative;
+	flex: 1 1 auto;
+	height: 6px;
+	border-radius: 3px;
+	background: linear-gradient(90deg, rgba(128, 128, 128, 0.25), rgba(128, 128, 128, 0.45));
+}
 .pt3-mark-current,
 .pt3-mark-factory,
 .pt3-mark-new {

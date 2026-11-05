@@ -15,6 +15,12 @@ export const canMixin = {
 			void this.identityTick
 			const need = neededRole(op, args)
 			return need === null || roleAtLeast(need)
+		},
+		// why a call is locked for this person, by cause (no session / role too low): '' when they may; for the title of a button
+		lockWhy(op, args) {
+			void this.identityTick
+			const need = neededRole(op, args)
+			return need === null || roleAtLeast(need) ? '' : this.lockText(need)
 		}
 	}
 }

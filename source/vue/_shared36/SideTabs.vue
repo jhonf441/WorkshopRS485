@@ -8,7 +8,8 @@
 				<v-icon small>{{ collapsed ? 'mdi-chevron-double-right' : 'mdi-chevron-double-left' }}</v-icon>
 			</button>
 		</div>
-		<template v-for="(it, i) in items">
+		<div class="st-scroll">
+			<template v-for="(it, i) in items">
 			<div v-if="it.group && (i === 0 || items[i - 1].group !== it.group)" :key="'g' + i" class="st-group" :data-group="indexGroup(it.group)">{{ it.group }}</div>
 			<button
 				:key="'i' + i"
@@ -28,6 +29,7 @@
 				<span v-if="it.badge" class="st-badge">{{ it.badge }}</span>
 			</button>
 		</template>
+		</div>
 	</nav>
 </template>
 
@@ -144,14 +146,17 @@ export default {
 .st-layout { display: flex; gap: 14px; align-items: flex-start; }
 .st-body { flex: 1 1 auto; min-width: 0; }
 /* sticky and taller than the window (Machine has 16 items): it scrolls inside, so the last ones can always be reached */
-.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow-y: auto; overscroll-behavior: contain; }
+.sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow: hidden; }
+/* the head (pin and fold arrow) stays on screen: only the items scroll, inside .st-scroll */
+.sidetabs .st-head { flex: none; }
+.sidetabs .st-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 /* the scrollbar of the bar is the thin one of the Jog (4 px, no track) and none at all on a touch screen; its colour is family.css.
  * scrollbar-width: auto (!important) on purpose: any copy of this bar that still says `thin` (every plugin bundles its own CSS and all of them are
  * loaded in the same page) would make Chromium ignore ::-webkit-scrollbar. */
-.sidetabs { scrollbar-width: auto !important; }
-.sidetabs::-webkit-scrollbar { width: 4px; background: transparent; }
-.sidetabs::-webkit-scrollbar-track { background: transparent; }
-@media (pointer: coarse) { .sidetabs { scrollbar-width: none !important; } .sidetabs::-webkit-scrollbar { display: none; } }
+.sidetabs .st-scroll { scrollbar-width: auto !important; }
+.sidetabs .st-scroll::-webkit-scrollbar { width: 4px; background: transparent; }
+.sidetabs .st-scroll::-webkit-scrollbar-track { background: transparent; }
+@media (pointer: coarse) { .sidetabs .st-scroll { scrollbar-width: none !important; } .sidetabs .st-scroll::-webkit-scrollbar { display: none; } }
 .sidetabs.st-collapsed { width: 52px; }
 .sidetabs .st-head { display: flex; align-items: center; justify-content: space-between; }
 .sidetabs.st-collapsed .st-head { flex-direction: column-reverse; justify-content: center; }
@@ -174,8 +179,9 @@ export default {
 @media (max-width: 900px) {
 	.st-layout { flex-direction: column; gap: 8px; align-items: stretch; }
 	.st-body { width: 100%; }
-	.sidetabs, .sidetabs.st-collapsed { position: static; max-height: none; overflow-y: visible; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
+	.sidetabs, .sidetabs.st-collapsed { position: static; max-height: none; overflow: visible; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
 	.sidetabs .st-fold { display: none; }
+	.sidetabs .st-scroll { display: contents; }
 	/* in the row layout the group name goes before its tabs, so "Configure" is still there */
 	.sidetabs.sidetabs .st-group, .sidetabs.st-collapsed .st-group { display: inline-flex; align-items: center; flex: none; padding: 0 8px 0 6px; margin: 0; border-top: 0; text-align: left; overflow: visible; }
 	.sidetabs .st-item, .sidetabs.st-collapsed .st-item { width: auto; flex: none; border-left: none; border-bottom: 2px solid transparent; justify-content: flex-start; padding: 6px 12px; }

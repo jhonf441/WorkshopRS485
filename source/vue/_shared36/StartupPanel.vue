@@ -78,7 +78,7 @@
 					<div v-if="wizard.failure" class="error--text text-body-2">{{ wizard.failure }}</div>
 					<div class="d-flex flex-wrap mt-2 startup-buttons">
 						<v-btn small @click="wizard.view = 'question'; wizard.failure = null">{{ tt('back') }}</v-btn>
-						<v-btn small color="success" :disabled="wizard.writing || locked" @click="save(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('save') }}</v-btn>
+						<v-btn small color="success" class="black--text" :disabled="wizard.writing || locked" @click="save(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('save') }}</v-btn>
 					</div>
 				</div>
 
@@ -232,7 +232,7 @@ export default {
 		recheck: { type: Function, default: null }
 	},
 	data() {
-		return { list: null, hidden: [], open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false };
+		return { list: null, hidden: [], open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false, refusal: '' };
 	},
 	computed: {
 		// signed out the card can be read but nothing here creates or changes a file: each button is off and the sentence says why
@@ -259,7 +259,8 @@ export default {
 					why: 'service_for',
 					ifMissing: 'service_missing',
 					// signed out the service cannot be asked, so it is not said to be off: the row says the session is what is missing
-					texts: { missing: signedOut() ? 'service_sign_in' : 'service_not_running' }
+					// a refusal of the role is not a service that is off either (it used to say "not running" to an operator)
+					texts: { missing: this.locked ? 'service_sign_in' : this.refusal === 'role' ? 'service_role' : 'service_not_running' }
 				}]
 				: [];
 			return service.concat(this.defs);
@@ -510,6 +511,10 @@ export default {
 				this.reported = '';
 			});
 		},
+		// the person signed in or out, or the role changed: the card reads the service again (it must not keep the answer of the time it was signed out)
+		onSessionChange() {
+			this.refresh(false);
+		},
 		async refresh(create) {
 			if (create) {
 				try {
@@ -521,8 +526,10 @@ export default {
 			try {
 				const r = await api('examples.list', { plugin: this.plugin });
 				this.list = r && Array.isArray(r.files) ? r.files : null;
+				this.refusal = '';
 			} catch (e) {
 				this.list = null;
+				this.refusal = e && e.code === 'forbidden' ? 'role' : '';
 			}
 			if (this.recheck) {
 				try {

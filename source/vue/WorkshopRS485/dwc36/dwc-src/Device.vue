@@ -9,7 +9,7 @@
 				<div class="cab-text">
 					<div class="d-flex align-center flex-wrap" style="gap:6px">
 						<span class="text-h6 cab-name">{{ cfg.name || cfg.id }}</span>
-						<v-chip x-small :color="isNotice ? 'info' : est.color" text-color="white">{{ isNotice ? $t('plugins.WorkshopRS485.device.warning') : est.text }}</v-chip>
+						<v-chip x-small :color="look(isNotice ? 'info' : est.color).color" :text-color="look(isNotice ? 'info' : est.color).textColor">{{ isNotice ? $t('plugins.WorkshopRS485.device.warning') : est.text }}</v-chip>
 						<v-chip x-small outlined :color="cfg.axis ? 'primary' : 'grey'" :title="cfg.axis ? $t('plugins.WorkshopRS485.device.axis_faults_pause') : $t('plugins.WorkshopRS485.device.no_axis_faults_warn')">
 							<v-icon x-small left>mdi-axis-arrow</v-icon>{{ cfg.axis ? $t('plugins.WorkshopRS485.device.axis_name', { axis: cfg.axis }) : $t('plugins.WorkshopRS485.common.no_axis') }}
 						</v-chip>
@@ -23,7 +23,7 @@
 					</div>
 				</div>
 				<div class="cab-buttons">
-					<v-btn small text :disabled="!can('rs485.save')" @click="$emit('edit')"><v-icon small left>mdi-pencil</v-icon>{{ $t('plugins.WorkshopRS485.common.edit') }}</v-btn>
+					<v-btn small text :disabled="!can('rs485.save')" :title="lockWhy('rs485.save')" @click="$emit('edit')"><v-icon small left>mdi-pencil</v-icon>{{ $t('plugins.WorkshopRS485.common.edit') }}</v-btn>
 					<v-btn icon small :title="collapsed ? $t('plugins.WorkshopRS485.device.show_details') : $t('plugins.WorkshopRS485.device.hide_details')" @click="fold(!collapsed)">
 						<v-icon>{{ collapsed ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
 					</v-btn>
@@ -48,21 +48,28 @@
 				<span v-if="isNotice" class="grey--text"> {{ $t('plugins.WorkshopRS485.device.moves_no_axis_the_machine_can') }}</span>
 			</div>
 
-			<!-- ===== T3D ===== -->
-			<template v-if="cfg.profile === 't3d'">
+			<!-- ===== page with tabs: the T3D servo, and any device whose JSON profile brings parameters, states or alarms ===== -->
+			<template v-if="rich">
 				<div class="tiles mt-3">
 					<div class="tile" :class="{ 'tile-alarm': v.alarm }">
 						<div class="tile-label"><v-icon x-small class="mr-1">mdi-alert-octagon-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.alarm') }}</div>
-						<div class="tile-value" :class="v.alarm ? 'error--text' : (v.alarm === 0 ? 'success--text' : '')">{{ v.alarm == null ? '--' : (v.alarm ? 'Err' + v.alarm : $t('plugins.WorkshopRS485.common.none')) }}</div>
+						<div class="tile-value" :class="v.alarm ? 'error--text' : (v.alarm === 0 ? 'success--text' : '')">{{ v.alarm == null ? '--' : (v.alarm ? (isT3d ? 'Err' : '') + v.alarm : $t('plugins.WorkshopRS485.common.none')) }}</div>
 						<div v-if="alarmInfo" class="tile-sub red--text text--lighten-2">{{ alarmInfo.name }}</div>
 					</div>
-					<div class="tile">
+					<template v-if="!isT3d">
+						<div v-for="w in watched.slice(0, 3)" :key="w.name" class="tile">
+							<div class="tile-label"><v-icon x-small class="mr-1">mdi-chart-line-variant</v-icon>{{ w.name }}</div>
+							<div class="tile-value">{{ v[w.name] == null ? '--' : v[w.name] }}<small v-if="w.unit"> {{ w.unit }}</small></div>
+							<svg v-if="(histVars[w.name] || []).length > 1" class="mini" viewBox="0 0 100 20" preserveAspectRatio="none"><polyline :points="line(histVars[w.name])" fill="none" stroke="#66BB6A" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
+						</div>
+					</template>
+					<div v-if="isT3d" class="tile">
 						<div class="tile-label"><v-icon x-small class="mr-1">mdi-arm-flex-outline</v-icon>Torque</div>
 						<div class="tile-value">{{ v.torque == null ? '--' : v.torque }}<small> %</small></div>
 						<v-progress-linear :value="Math.min(100, Math.abs(v.torque || 0) / (op.torque_max || 150) * 100)" height="4" rounded :color="Math.abs(v.torque || 0) > (op.torque_max || 150) * 0.8 ? 'warning' : 'success'" background-color="grey darken-3" />
 						<div class="tile-sub">{{ $t('plugins.WorkshopRS485.device.peak_and_limit', { peak: v.torque_peak == null ? '--' : v.torque_peak, max: op.torque_max }) }}</div>
 					</div>
-					<div class="tile">
+					<div v-if="isT3d" class="tile">
 						<div class="tile-label"><v-icon x-small class="mr-1">mdi-flash-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.current') }}</div>
 						<div class="tile-value">{{ v.current == null ? '--' : v.current.toFixed(1) }}<small> A</small></div>
 						<svg v-if="histCurrent.length > 1" class="mini" viewBox="0 0 100 20" preserveAspectRatio="none"><polyline :points="line(histCurrent)" fill="none" stroke="#66BB6A" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
@@ -79,8 +86,8 @@
 				<div v-if="v.alarm" class="alarm-box mt-3" :class="{ notice: isNotice }">
 					<div class="d-flex align-center flex-wrap" style="gap:8px">
 						<v-icon :color="isNotice ? 'info' : 'error'">mdi-alert-octagon</v-icon>
-						<span class="text-subtitle-1 font-weight-medium">Err{{ v.alarm }} &middot; {{ alarmInfo ? alarmInfo.name : $t('plugins.WorkshopRS485.device.alarm_not_in_manual') }}</span>
-						<v-chip v-if="alarmInfo" x-small :color="DELETED[alarmInfo.deleted].color" text-color="white">{{ DELETED[alarmInfo.deleted].text }}</v-chip>
+						<span class="text-subtitle-1 font-weight-medium">{{ isT3d ? 'Err' : '' }}{{ v.alarm }} &middot; {{ alarmInfo ? alarmInfo.name : $t('plugins.WorkshopRS485.device.alarm_not_in_manual') }}</span>
+						<v-chip v-if="alarmInfo" x-small :color="look(DELETED[alarmInfo.deleted].color).color" :text-color="look(DELETED[alarmInfo.deleted].color).textColor">{{ DELETED[alarmInfo.deleted].text }}</v-chip>
 					</div>
 					<div v-if="alarmInfo" class="steps-alarm mt-2">
 						<div><span class="et">{{ $t('plugins.WorkshopRS485.common.what_happens') }}</span><span>{{ alarmInfo.description }}</span></div>
@@ -88,7 +95,7 @@
 						<div><span class="et">{{ $t('plugins.WorkshopRS485.device.how_it_clears') }}</span><span>{{ alarmInfo.procedure || alarmInfo.deleted_text }}</span></div>
 					</div>
 					<div class="d-flex flex-wrap align-center mt-2" style="gap:8px">
-						<v-btn v-if="(!alarmInfo || alarmInfo.deleted === 'si') && can('rs485.action', { action: 'clear_alarm' })" small outlined :color="armed === 'alarm' ? 'error' : ''" :loading="busy === 'alarm'" @click="arm('alarm', deleteAlarm)">
+						<v-btn v-if="canClear && (!alarmInfo || alarmInfo.deleted === 'si') && can('rs485.action', { action: 'clear_alarm' })" small outlined :color="armed === 'alarm' ? 'error' : ''" :loading="busy === 'alarm'" @click="arm('alarm', deleteAlarm)">
 							<v-icon small left>mdi-alarm-off</v-icon>{{ armed === 'alarm' ? $t('plugins.WorkshopRS485.device.tap_again_to_clear_the_alarm') : $t('plugins.WorkshopRS485.device.clear_alarm') }}
 						</v-btn>
 						<v-btn small text @click="open(3)"><v-icon small left>mdi-format-list-numbered</v-icon>{{ $t('plugins.WorkshopRS485.device.see_all_codes') }}</v-btn>
@@ -106,7 +113,19 @@
 						<v-tab><v-icon small left>mdi-history</v-icon>{{ $t('plugins.WorkshopRS485.device.history') }}</v-tab>
 					</v-tabs>
 					<div class="pt-3">
-						<template v-if="section === 0">
+						<template v-if="section === 0 && !isT3d">
+							<v-row v-if="chartVars.length" dense>
+								<v-col v-for="w in chartVars" :key="w.name" cols="12" md="6">
+									<div class="text-caption grey--text">{{ w.name }}</div>
+									<detail-chart :history="histVars[w.name]" :color="w.color" :unit="w.unit" :label="w.name" :height="140" />
+								</v-col>
+							</v-row>
+							<div v-else class="empty">
+								<v-icon large color="grey">mdi-chart-line</v-icon>
+								<div>{{ watched.length ? $t('plugins.WorkshopRS485.device.the_charts_appear_after_a_few_readings') : $t('plugins.WorkshopRS485.device.mark_a_parameter_or_state_to_chart') }}</div>
+							</div>
+						</template>
+						<template v-else-if="section === 0">
 							<v-row dense v-if="histTorque.length > 1">
 								<v-col cols="12" md="6">
 									<div class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.device.torque') }}</div>
@@ -173,7 +192,7 @@
 						<v-select v-model="manual.func" :items="[3, 4]" :label="$t('plugins.WorkshopRS485.common.function')" dense outlined hide-details style="max-width:110px" />
 						<v-btn small outlined :loading="busy === 'read'" @click="readManual()">{{ $t('plugins.WorkshopRS485.common.read') }}</v-btn>
 						<v-text-field v-model.number="manual.value" type="number" :label="$t('plugins.WorkshopRS485.common.value')" dense outlined hide-details style="max-width:120px" />
-						<v-btn small outlined :disabled="!can('rs485.action', { action: 'write_register' })" :color="armed === 'write' ? 'error' : ''" :loading="busy === 'write'" @click="arm('write', writeManual)">
+						<v-btn small outlined :disabled="!can('rs485.action', { action: 'write_register' })" :title="lockWhy('rs485.action', { action: 'write_register' })" :color="armed === 'write' ? 'error' : ''" :loading="busy === 'write'" @click="arm('write', writeManual)">
 							{{ armed === 'write' ? $t('plugins.WorkshopRS485.device.tap_again') : $t('plugins.WorkshopRS485.common.write') }}
 						</v-btn>
 						<span v-if="result" class="text-caption" :class="resultError ? 'error--text' : 'success--text'">{{ result }}</span>
@@ -182,7 +201,7 @@
 					<!-- identificacion Modbus (funcion 43): fabricante y modelo -->
 					<div class="text-subtitle-2 mt-4 mb-1"><v-icon small class="mr-1">mdi-card-account-details-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.which_device_it_is') }}</div>
 					<div class="d-flex flex-wrap align-center" style="gap:8px">
-						<v-btn small outlined :disabled="!can('rs485.action', { action: 'identify' })" :loading="busy === 'identify'" @click="identify()">{{ $t('plugins.WorkshopRS485.device.identify') }}</v-btn>
+						<v-btn small outlined :disabled="!can('rs485.action', { action: 'identify' })" :title="lockWhy('rs485.action', { action: 'identify' })" :loading="busy === 'identify'" @click="identify()">{{ $t('plugins.WorkshopRS485.device.identify') }}</v-btn>
 						<template v-if="ident">
 							<span class="text-body-2"><b>{{ ident.manufacturer || '?' }}</b> {{ ident.model }}<span v-if="ident.version" class="grey--text"> &middot; {{ $t('plugins.WorkshopRS485.device.version_n', { v: ident.version }) }}</span></span>
 							<v-btn x-small text color="primary" @click="$emit('rename', nameIdent)">{{ $t('plugins.WorkshopRS485.device.use_as_name') }}</v-btn>
@@ -204,7 +223,7 @@
 						<v-text-field v-model.number="exp.since" type="number" min="0" :label="$t('plugins.WorkshopRS485.common.from')" dense outlined hide-details style="max-width:100px" />
 						<v-text-field v-model.number="exp.until" type="number" min="0" :label="$t('plugins.WorkshopRS485.common.to')" dense outlined hide-details style="max-width:100px" />
 						<v-select v-model="exp.func" :items="functionsExplore" :label="$t('plugins.WorkshopRS485.device.type')" dense outlined hide-details style="max-width:220px" />
-						<v-btn v-if="!expState.active" small color="primary" :disabled="!can('rs485.action', { action: 'explore' })" :loading="busy === 'explore'" @click="explore()"><v-icon small left>mdi-play</v-icon>{{ $t('plugins.WorkshopRS485.device.explore') }}</v-btn>
+						<v-btn v-if="!expState.active" small color="primary" :disabled="!can('rs485.action', { action: 'explore' })" :title="lockWhy('rs485.action', { action: 'explore' })" :loading="busy === 'explore'" @click="explore()"><v-icon small left>mdi-play</v-icon>{{ $t('plugins.WorkshopRS485.device.explore') }}</v-btn>
 						<v-btn v-else small outlined color="warning" @click="exploreCancel()">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
 					</div>
 					<template v-if="expState.total">
@@ -236,6 +255,7 @@
 </template>
 
 <script>
+import { chipLook } from './chip-look.js'
 import i18n from '../../i18n'
 
 'use strict'
@@ -247,7 +267,7 @@ import StatesT3d from './StatesT3d.vue'
 import AlarmsT3d from './AlarmsT3d.vue'
 import HistoryT3d from './HistoryT3d.vue'
 import MachineProfile from './MachineProfile.vue'
-import { action, info, deleted, states, does, textOf, canMixin } from './api.js'
+import { action, info, deleted, states, does, textOf, canMixin, refusal } from './api.js'
 import { exchangeExportJson } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData } from './device-exchange.js'
@@ -275,6 +295,7 @@ export default {
 		return {
 			histTorque: [],
 			histCurrent: [],
+			histVars: {},
 			section: 0,
 			table: null,
 			tableError: null,
@@ -308,6 +329,26 @@ export default {
 		},
 		regs() {
 			return this.op.records || [];
+		},
+		isT3d() {
+			return this.cfg.profile === 't3d';
+		},
+		// the tabbed page: the servo, or a device whose profile brings what the tabs show
+		rich() {
+			const pe = this.op.profile_device;
+			return this.isT3d || (this.cfg.profile === 'generic' && !!pe && !!((pe.params || []).length || (pe.states || []).length || (pe.alarms || []).length));
+		},
+		// the variables read every cycle (what the profile marks to watch or chart): their name, unit and the colour of their chart
+		watched() {
+			const COLORS = ['#FFA726', '#66BB6A', '#42A5F5', '#AB47BC', '#EF5350', '#26C6DA'];
+			return this.regs.map((r, i) => ({ name: r.name || ('reg ' + r.record), unit: r.unit || '', color: COLORS[i % COLORS.length] }))
+				.filter(w => this.v[w.name] !== undefined || this.histVars[w.name]);
+		},
+		chartVars() {
+			return this.watched.filter(w => (this.histVars[w.name] || []).length > 1);
+		},
+		canClear() {
+			return this.isT3d || !!(this.table && this.table.can_clear_alarm);
 		},
 		hasProfile() {
 			const pe = this.op.profile_device;
@@ -384,13 +425,35 @@ export default {
 		}
 	},
 	watch: {
+		// a profile loaded or removed while the page is open
+		rich(on) {
+			this.table = null;
+			this.tableError = null;
+			if (on) {
+				this.loadTable();
+			}
+		},
 		mark(t, old) {
 			if (!t || t === old) {
 				return;
 			}
 			const ahora = Date.now();
 			this.lastReading = ahora;
-			if (this.cfg.profile !== 't3d') {
+			if (!this.isT3d) {
+				for (const w of this.watched) {
+					const y = this.v[w.name];
+					if (typeof y !== 'number') {
+						continue;
+					}
+					if (!this.histVars[w.name]) {
+						this.$set(this.histVars, w.name, []);
+					}
+					const h = this.histVars[w.name];
+					h.push({ t: ahora, y });
+					if (h.length > HIST) {
+						h.splice(0, h.length - HIST);
+					}
+				}
 				return;
 			}
 			this.histTorque.push({ t: ahora, y: this.v.torque });
@@ -403,13 +466,8 @@ export default {
 	},
 	async mounted() {
 		this.clock = setInterval(() => { this.now = Date.now(); }, 1000);
-		if (this.cfg.profile !== 't3d') {
-			return;
-		}
-		try {
-			this.table = await info(this.sendCode, this.cfg.id);
-		} catch (e) {
-			this.tableError = i18n.t('plugins.WorkshopRS485.device.could_not_load_the_servo_table') + (e.message || e);
+		if (this.rich) {
+			await this.loadTable();
 		}
 	},
 	beforeDestroy() {
@@ -418,7 +476,18 @@ export default {
 		clearTimeout(this.expTimer);
 	},
 	methods: {
+		// the fill and the text of a filled chip, readable (chip-look.js)
+		look(name) {
+			return chipLook(name);
+		},
 		...mapActions('machine', ['sendCode']),
+		async loadTable() {
+			try {
+				this.table = await info(this.sendCode, this.cfg.id);
+			} catch (e) {
+				this.tableError = refusal(e) || i18n.t('plugins.WorkshopRS485.device.could_not_load_the_servo_table') + (e.message || e);
+			}
+		},
 		textOf: textOf,
 		arm(that, fn) {
 			if (this.armed === that) {
@@ -472,7 +541,7 @@ export default {
 				this.result = await fn();
 				this.resultError = false;
 			} catch (e) {
-				this.result = e.message || String(e);
+				this.result = refusal(e) || e.message || String(e);
 				this.resultError = true;
 			} finally {
 				this.busy = null;
@@ -519,7 +588,7 @@ export default {
 				this.expState = await action(this.sendCode, this.cfg.id, 'explore', { since: this.exp.since, until: this.exp.until, func: this.exp.func });
 				this.followExploring();
 			} catch (e) {
-				this.result = e.message || String(e);
+				this.result = refusal(e) || e.message || String(e);
 				this.resultError = true;
 			} finally {
 				this.busy = null;

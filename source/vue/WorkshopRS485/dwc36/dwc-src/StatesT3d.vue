@@ -51,6 +51,8 @@
 
 					<div v-else class="et3-value">
 						{{ format(values[e.id]) }}<small v-if="e.unit"> {{ e.unit }}</small>
+						<!-- a state of a JSON profile that names its values (0 = stopped, 1 = running): the text, tinted by its tone -->
+						<span v-if="optionOf(e)" class="et3-option font-weight-medium" :class="TONE_CLASS[optionOf(e).tone] || ''">&middot; {{ optionOf(e).text }}</span>
 					</div>
 				</div>
 			</div>
@@ -68,7 +70,9 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { action, hex } from './api.js'
+import { action, hex, refusal } from './api.js'
+
+const TONE_CLASS = { ok: 'success--text', warn: 'warning--text', error: 'error--text' };
 
 export default {
 	props: {
@@ -77,6 +81,7 @@ export default {
 	},
 	data() {
 		return {
+			TONE_CLASS,
 			values: {},
 			hour: null,
 			error: null,
@@ -110,6 +115,10 @@ export default {
 		clearTimeout(this.timer);
 	},
 	methods: {
+		optionOf(e) {
+			const v = this.values[e.id];
+			return v == null || !(e.options || []).length ? null : e.options.find(o => o.value === v) || null;
+		},
 		...mapActions('machine', ['sendCode']),
 		async cycle() {
 			if (!this.live) {
@@ -133,7 +142,7 @@ export default {
 					this.hour = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':');
 					this.error = null;
 				} catch (e) {
-					this.error = i18n.t('plugins.WorkshopRS485.statesT3d.no_answer_from_the_servo') + (e.message || e);
+					this.error = refusal(e) || i18n.t('plugins.WorkshopRS485.statesT3d.no_answer_from_the_servo') + (e.message || e);
 				}
 			}
 			// no response: retry more slowly so as not to fill the bus queue
@@ -272,7 +281,7 @@ export default {
 	color: var(--tp-faint, #9e9e9e);
 }
 .et3-bit.on {
-	background: #43a047;
+	background: #2e7d32;
 	color: #fff;
 }
 </style>

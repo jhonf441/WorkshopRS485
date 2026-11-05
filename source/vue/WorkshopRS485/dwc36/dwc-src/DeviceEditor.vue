@@ -156,11 +156,11 @@
 				<v-switch :input-value="!!form.absent" :disabled="!form.active" :label="$t('plugins.WorkshopRS485.deviceEditor.absent_on_purpose')" dense hide-details class="mt-0 mr-4"
 					:title="$t('plugins.WorkshopRS485.deviceEditor.absent_hint')" @change="putAbsent" />
 				<v-spacer />
-				<v-btn v-if="!newItem" small text :disabled="!can('rs485.save')" :color="armed ? 'error' : 'grey'" @click="armDelete">
+				<v-btn v-if="!newItem" small text :disabled="!can('rs485.save')" :title="lockWhy('rs485.save')" :color="armed ? 'error' : 'grey'" @click="armDelete">
 					{{ armed ? $t('plugins.WorkshopRS485.deviceEditor.tap_again_to_remove_it') : $t('plugins.WorkshopRS485.deviceEditor.remove_device') }}
 				</v-btn>
 				<v-btn small text @click="$emit('input', false)">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
-				<v-btn small color="primary" :loading="saving" :disabled="!valid || !can('rs485.save')" @click="$emit('save', copy(form))">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
+				<v-btn small color="primary" :loading="saving" :disabled="!valid || !can('rs485.save')" :title="lockWhy('rs485.save')" @click="$emit('save', copy(form))">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</v-card-actions>
 		</v-card>
 	</v-dialog>

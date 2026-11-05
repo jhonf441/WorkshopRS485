@@ -7,7 +7,7 @@
 			<div class="text-subtitle-2">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}</div>
 			<div class="d-flex align-center mt-1" style="gap:6px">
 				<v-text-field v-model.trim="noteBackup" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.note_optional_e_g_before_tuning')" dense outlined hide-details />
-				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
+				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :title="lockWhy('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</div>
 			<div class="text-subtitle-2 mt-3">{{ $t('plugins.WorkshopRS485.paramsT3d.on_the_sd') }} <span class="grey--text text-caption">(sys/workshop/data/rs485-backups/)</span></div>
 			<div v-if="!backups.length" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.paramsT3d.there_are_no_backups_of_this') }}</div>
@@ -18,7 +18,7 @@
 				</div>
 				<v-btn x-small text :disabled="!!r.error" @click="compareWith(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.compare') }}</v-btn>
 				<v-btn x-small text :disabled="!!r.error" @click="restore(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.restore') }}</v-btn>
-				<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" x-small icon :disabled="!can('rs485.backup_delete')" :color="armedDelete === r.name ? 'error' : ''" @click="touchDeleteBackup(r)"><v-icon x-small>mdi-delete</v-icon></v-btn>
+				<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" x-small icon :disabled="!can('rs485.backup_delete')" :title="lockWhy('rs485.backup_delete')" :color="armedDelete === r.name ? 'error' : ''" @click="touchDeleteBackup(r)"><v-icon x-small>mdi-delete</v-icon></v-btn>
 			</div>
 			<v-divider class="my-2" />
 			<div class="d-flex flex-wrap" style="gap:6px">
@@ -35,7 +35,7 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { callService, canMixin } from './api.js'
+import { callService, canMixin, refusal } from './api.js'
 import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { backupData, exportBackup, importBackup, isBackup } from './params-backup.js'
@@ -75,7 +75,7 @@ export default { mixins: [canMixin],
 				const r = await callService(this.sendCode, { P: 'backups', I: this.dispId });
 				this.backups = r.backups || [];
 			} catch (e) {
-				this.say(this.tp('could_not_list_the_backups') + (e.message || e), true);
+				this.say(refusal(e) || this.tp('could_not_list_the_backups') + (e.message || e), true);
 			}
 		},
 		async saveBackup() {
@@ -86,7 +86,7 @@ export default { mixins: [canMixin],
 				this.noteBackup = '';
 				await this.loadBackups();
 			} catch (e) {
-				this.say(this.tp('could_not_save_the_backup') + (e.message || e), true);
+				this.say(refusal(e) || this.tp('could_not_save_the_backup') + (e.message || e), true);
 			} finally {
 				this.savingBackup = false;
 			}
@@ -103,7 +103,7 @@ export default { mixins: [canMixin],
 				this.$emit('compare', await this.readBackup(r));
 				this.menuBackup = false;
 			} catch (e) {
-				this.say(this.tp('could_not_read_the_backup') + (e.message || e), true);
+				this.say(refusal(e) || this.tp('could_not_read_the_backup') + (e.message || e), true);
 			}
 		},
 		async restore(r) {
@@ -111,7 +111,7 @@ export default { mixins: [canMixin],
 				this.$emit('restore', await this.readBackup(r));
 				this.menuBackup = false;
 			} catch (e) {
-				this.say(this.tp('could_not_read_the_backup') + (e.message || e), true);
+				this.say(refusal(e) || this.tp('could_not_read_the_backup') + (e.message || e), true);
 			}
 		},
 		touchDeleteBackup(r) {
@@ -123,7 +123,7 @@ export default { mixins: [canMixin],
 			}
 			this.armedDelete = null;
 			callService(this.sendCode, { P: 'backup_delete', N: r.name }).then(() => this.loadBackups()).catch(e => {
-				this.say(this.tp('could_not_delete', { error: e.message || String(e) }), true);
+				this.say(refusal(e) || this.tp('could_not_delete', { error: e.message || String(e) }), true);
 			});
 		},
 		// the parameters read as a file of the exchange standard (envelope workshop-rs485-servo-params)

@@ -5,7 +5,7 @@
 			<div class="pt3-summary">
 				<template v-if="reading">
 					<v-progress-circular :value="progress" size="18" width="2" color="primary" class="mr-2" />
-					{{ $t('plugins.WorkshopRS485.paramsT3d.reading_from_servo', { n: readN, total: TOTAL }) }}
+					{{ $t('plugins.WorkshopRS485.paramsT3d.reading_from_servo', { n: readN, total: totalRead }) }}
 				</template>
 				<template v-else-if="hasReading">
 					<v-icon small :color="errors ? 'warning' : 'success'" class="mr-1">{{ errors ? 'mdi-alert' : 'mdi-check-circle' }}</v-icon>
@@ -27,7 +27,7 @@
 			<v-chip-group v-model="view" mandatory active-class="primary--text" class="pt3-views">
 				<v-chip small filter value="all">{{ $t('plugins.WorkshopRS485.common.all') }}</v-chip>
 				<v-chip small filter value="different">{{ $t('plugins.WorkshopRS485.paramsT3d.different_from_factory_n', { n: counts.different }) }}</v-chip>
-				<v-chip small filter value="invalid" :color="counts.invalid ? 'error' : ''" :text-color="counts.invalid ? 'white' : ''">{{ $t('plugins.WorkshopRS485.paramsT3d.invalid_n', { n: counts.invalid }) }}</v-chip>
+				<v-chip small filter value="invalid" :color="counts.invalid ? look('error').color : ''" :text-color="counts.invalid ? 'white' : ''">{{ $t('plugins.WorkshopRS485.paramsT3d.invalid_n', { n: counts.invalid }) }}</v-chip>
 				<v-chip v-if="comparing" small filter value="backup">{{ $t('plugins.WorkshopRS485.paramsT3d.different_from_backup_n', { n: counts.vsBackup }) }}</v-chip>
 			</v-chip-group>
 			<!-- Labels: compact panel that closes when one is chosen (2026-10-10).
@@ -53,12 +53,12 @@
 					</div>
 				</v-card>
 			</v-menu>
-			<v-chip v-if="labelFilter" small close @click:close="labelSel = null" :color="labels[labelFilter].color" text-color="white">
+			<v-chip v-if="labelFilter" small close @click:close="labelSel = null" :color="look(labels[labelFilter].color).color" :text-color="look(labels[labelFilter].color).textColor">
 				<v-icon x-small left>{{ labels[labelFilter].icon }}</v-icon>{{ labels[labelFilter].text }}
 			</v-chip>
 			<v-spacer />
 			<template v-if="comparing">
-				<v-chip small color="primary" text-color="white" close @click:close="comparing = null">
+				<v-chip small :color="look('primary').color" text-color="white" close @click:close="comparing = null">
 					<v-icon x-small left>mdi-compare</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.comparing_with_backup', { date: (comparing.date || '').replace('T', ' ') }) }}
 				</v-chip>
 			</template>
@@ -106,7 +106,7 @@
 				</div>
 				<v-checkbox v-if="hasInvalid && atLeast('admin')" v-model="force" dense hide-details class="mt-0 mr-3" :label="$t('plugins.WorkshopRS485.paramsT3d.force_invalid_values')" color="error" />
 				<v-btn small text @click="discard()">{{ $t('plugins.WorkshopRS485.common.discard') }}</v-btn>
-				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
+				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" :title="lockWhy('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
 					<v-icon small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.write_to_the_servo') }}
 				</v-btn>
 			</template>
@@ -115,7 +115,7 @@
 					<v-icon small color="warning" class="mr-1">mdi-alert</v-icon>
 					{{ $t('plugins.WorkshopRS485.paramsT3d.n_written_but', { n: pendingEeprom }) }} <b>{{ $t('plugins.WorkshopRS485.paramsT3d.not_saved') }}</b>{{ $t('plugins.WorkshopRS485.paramsT3d.they_re_lost_when_the_servo') }}
 				</div>
-				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
+				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" :title="lockWhy('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
 					<v-icon small left>mdi-content-save</v-icon>{{ armed ? $t('plugins.WorkshopRS485.paramsT3d.tap_again_store_in_the_servo') : $t('plugins.WorkshopRS485.paramsT3d.save_to_eeprom') }}
 				</v-btn>
 			</template>
@@ -124,12 +124,13 @@
 </template>
 
 <script>
+import { chipLook } from './chip-look.js'
 import i18n from '../../i18n'
 
 'use strict'
 
 import { mapActions } from 'vuex'
-import { action, info, canMixin } from './api.js'
+import { action, info, canMixin, refusal } from './api.js'
 import { TOTAL, BY_READING, three, validate } from './params-model.js'
 import ParamCard from './ParamCard.vue'
 import ParamsBackups from './ParamsBackups.vue'
@@ -154,6 +155,8 @@ export default { mixins: [canMixin],
 			groups: [],
 			partial: [],
 			noExists: 0x5A53,
+			generic: false, // the table comes from a JSON profile (Generic.info): its registers, not the servo's 0..255
+			regList: [],
 			manual: '',
 			group: 'mode',
 			filter: '',
@@ -200,7 +203,7 @@ export default { mixins: [canMixin],
 			}));
 			parc.forEach(p => known.add(p.record));
 			const internal = [];
-			for (let r = 0; r < TOTAL; r++) {
+			for (let r = 0; r < (this.generic ? 0 : TOTAL); r++) {
 				const v = this.values[r];
 				if (!known.has(r) && v && (v.error || v.value !== this.noExists)) {
 					internal.push({ record: r, name: tp('factory_internal_undocumented'), kind: 'internal', group: 'internal_factory', options: [], digits: [], description: '', note: '' });
@@ -209,7 +212,7 @@ export default { mixins: [canMixin],
 			return [...doc, ...parc, ...internal].sort((a, b) => a.record - b.record);
 		},
 		groupsAll() {
-			return [...this.groups, { id: 'internal_factory', name: tp('factory_internals'), description: tp('undocumented_registers_read_only') }];
+			return this.generic ? this.groups : [...this.groups, { id: 'internal_factory', name: tp('factory_internals'), description: tp('undocumented_registers_read_only') }];
 		},
 		groupsVisible() {
 			return this.groupsAll.map(g => ({ ...g, count: this.rows.filter(p => p.group === g.id).length })).filter(g => g.count);
@@ -264,7 +267,11 @@ export default { mixins: [canMixin],
 			};
 		},
 		progress() {
-			return this.readN / TOTAL * 100;
+			return this.readN / this.totalRead * 100;
+		},
+		// what is read: the 256 registers of the servo, or the registers the profile lists (a device from a JSON profile)
+		totalRead() {
+			return this.generic ? this.regList.length : TOTAL;
 		},
 		pending() {
 			return this.rows.filter(p => this.isPending(p)).map(p => ({
@@ -276,7 +283,7 @@ export default { mixins: [canMixin],
 			return this.pending.some(c => this.invalidEdited(c.p));
 		},
 		pendingEeprom() {
-			return Object.keys(this.written).length;
+			return this.generic ? 0 : Object.keys(this.written).length; // only the servo has a memory to save
 		}
 	},
 	async mounted() {
@@ -286,6 +293,8 @@ export default { mixins: [canMixin],
 			this.groups = r.groups || [];
 			this.partial = r.partial || [];
 			this.noExists = r.no_exists != null ? r.no_exists : this.noExists;
+			this.generic = !!r.generic;
+			this.regList = this.generic ? this.table.map(p => [3, p.record]) : [];
 			this.manual = r.manual || tp('t3d_manual');
 			const a = r.help || {};
 			this.labels = a.labels || {};
@@ -294,7 +303,7 @@ export default { mixins: [canMixin],
 			this.functionsDi = a.functions_di || {};
 			this.functionsDo = a.functions_do || {};
 		} catch (e) {
-			this.msg = tp('could_not_load_the_table') + (e.message || e);
+			this.msg = refusal(e) || tp('could_not_load_the_table') + (e.message || e);
 			this.msgError = true;
 			return;
 		}
@@ -307,6 +316,10 @@ export default { mixins: [canMixin],
 		CACHE[this.dispId] = { values: this.values, hour: this.hourReading, written: this.written, comparing: this.comparing };
 	},
 	methods: {
+		// the fill and the text of a filled chip, readable (chip-look.js)
+		look(name) {
+			return chipLook(name);
+		},
 		...mapActions('machine', ['sendCode']),
 		three,
 		chooseLabel(id) {
@@ -378,19 +391,21 @@ export default { mixins: [canMixin],
 			this.msg = null;
 			const nuevos = {};
 			try {
-				for (let i = 0; i < TOTAL; i += BY_READING) {
-					const regs = Array.from({ length: Math.min(BY_READING, TOTAL - i) }, (_, k) => i + k);
+				const total = this.totalRead;
+				for (let i = 0; i < total; i += BY_READING) {
+					// the servo: registers i..i+15; a profile: the next ones of its list as [function, register] (it answers raw, the card applies the scale)
+					const regs = this.generic ? this.regList.slice(i, i + BY_READING) : Array.from({ length: Math.min(BY_READING, total - i) }, (_, k) => i + k);
 					const r = await action(this.sendCode, this.dispId, 'read_params', { records: regs });
 					for (const v of r.values) {
-						nuevos[v.record] = v.error ? { error: v.error } : { value: v.value };
+						nuevos[v.record] = v.error ? { error: v.error } : { value: this.generic ? v.raw : v.value };
 					}
-					this.readN = i + regs.length;
+					this.readN = Math.min(total, i + regs.length);
 				}
 				this.values = nuevos;
 				const d = new Date();
 				this.hourReading = tp('read_at', { time: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
 			} catch (e) {
-				this.msg = tp('reading_stopped_check', { error: e.message || String(e) });
+				this.msg = refusal(e) || tp('reading_stopped_check', { error: e.message || String(e) });
 				this.msgError = true;
 				if (Object.keys(nuevos).length) {
 					this.values = { ...this.values, ...nuevos };
@@ -407,7 +422,7 @@ export default { mixins: [canMixin],
 			const faults = [];
 			for (const c of lista) {
 				try {
-					const r = await action(this.sendCode, this.dispId, 'write_param', { record: c.p.record, value: c.newItem, force: this.force });
+					const r = await action(this.sendCode, this.dispId, 'write_param', { record: c.p.record, value: c.newItem, force: this.force, raw: true });
 					this.$set(this.values, c.p.record, { value: r.value });
 					this.$set(this.written, c.p.record, true);
 					this.$delete(this.edited, c.p.record);
@@ -444,7 +459,7 @@ export default { mixins: [canMixin],
 				this.msg = tp('saved_in_the_servo_eeprom_the');
 				this.msgError = false;
 			} catch (e) {
-				this.msg = i18n.t('plugins.WorkshopRS485.common.could_not_save') + (e.message || e);
+				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_save') + (e.message || e);
 				this.msgError = true;
 			} finally {
 				this.savingEeprom = false;
@@ -590,13 +605,6 @@ export default { mixins: [canMixin],
 	gap: 8px;
 	padding: 3px 0;
 	cursor: pointer;
-}
-.pt3-bar-span {
-	position: relative;
-	flex: 1 1 auto;
-	height: 6px;
-	border-radius: 3px;
-	background: linear-gradient(90deg, rgba(128, 128, 128, 0.25), rgba(128, 128, 128, 0.45));
 }
 .pt3-label {
 	font-size: 11px;

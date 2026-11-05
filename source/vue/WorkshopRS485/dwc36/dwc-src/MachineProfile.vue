@@ -56,7 +56,7 @@
 									<template v-if="r.access === 'write'">
 										<v-select v-if="r.options && r.options.length" v-model="newItem" :items="r.options.map(o => ({ text: o.value + ' = ' + o.text, value: o.value }))" dense outlined hide-details class="pe-new-sel" @click.stop />
 										<v-text-field v-else v-model.number="newItem" type="number" step="any" :label="$t('plugins.WorkshopRS485.machineProfile.new_value') + (r.unit ? ' (' + r.unit + ')' : '')" dense outlined hide-details class="pe-new" @click.stop />
-										<v-btn x-small outlined :color="armed === key(r) ? 'error' : ''" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" :loading="busy === key(r) + 'e'" @click.stop="arm(r)">
+										<v-btn x-small outlined :color="armed === key(r) ? 'error' : ''" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" :title="lockWhy('rs485.action', { action: 'write_parameter' })" :loading="busy === key(r) + 'e'" @click.stop="arm(r)">
 											{{ armed === key(r) ? $t('plugins.WorkshopRS485.machineProfile.tap_again_to_write') : $t('plugins.WorkshopRS485.common.write') }}
 										</v-btn>
 									</template>
@@ -83,7 +83,7 @@
 				<div class="d-flex align-center flex-wrap" style="gap:8px">
 					<span class="pe-code">{{ a.code }}</span>
 					<span class="font-weight-medium">{{ a.text }}</span>
-					<v-chip v-if="a.code === alarmCurrent" x-small color="error" text-color="white">{{ $t('plugins.WorkshopRS485.common.active_now_2') }}</v-chip>
+					<v-chip v-if="a.code === alarmCurrent" x-small color="error darken-2" text-color="white">{{ $t('plugins.WorkshopRS485.common.active_now_2') }}</v-chip>
 					<v-chip x-small outlined>{{ textAction(a.action) }}</v-chip>
 				</div>
 				<div v-if="a.cause" class="text-body-2 mt-1"><span class="pe-et">{{ $t('plugins.WorkshopRS485.common.cause') }}</span>{{ a.cause }}</div>

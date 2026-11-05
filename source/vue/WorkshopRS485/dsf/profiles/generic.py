@@ -26,6 +26,7 @@ from message_data import error_text
 from messages import J, M
 from profiles import Profile
 from profiles import profile_json
+from profiles import t3d_alarms, t3d_help
 
 EXPLORE_MAX = 500   # registers per exploration
 EXPLORE_BLOCK = 10
@@ -149,12 +150,12 @@ class Generic(Profile):
             raise ValueError(M("generic_register_not_in_the_profile", register=reg))
         if r["access"] != "write":
             raise ValueError(M("generic_parameter_is_read_only", name=r["name"]))
-        value = float(p["value"])
+        esc = float(r.get("scale") or 1)
+        value = float(p["value"]) * (esc if p.get("raw") else 1)  # the parameters page sends the stored value (raw), the API units
         if r.get("min") is not None and value < float(r["min"]):
             raise ValueError(M("generic_value_is_less_than_the_minimum", name=r["name"], value=value, limit=r["min"]))
         if r.get("max") is not None and value > float(r["max"]):
             raise ValueError(M("generic_value_is_more_than_the_maximum", name=r["name"], value=value, limit=r["max"]))
-        esc = float(r.get("scale") or 1)
         raw = int(round(value / esc))
         if not -32768 <= raw <= 65535:
             raise ValueError(M("generic_value_does_not_fit_16_bits", value=value))
@@ -189,10 +190,113 @@ class Generic(Profile):
             profile["device"] = {"address": self.address}
         return profile_json.to_public(profile_json.normalize(profile)[0])
 
+    def rich(self):
+        """Does the profile carry what the T3D-style page needs (parameters, states or alarms)?"""
+        pe = self._pe()
+        return bool(pe.get("params") or pe.get("states") or pe.get("alarms"))
+
+    def _state_rows(self):
+        """The live states: the ones the profile lists plus its read-only (input register) parameters."""
+        pe = self._pe()
+        rows, seen = [], set()
+        for st in pe.get("states", []):
+            seen.add((st["func"], st["record"]))
+            rows.append(dict(st))
+        for r in pe.get("params", []):
+            if r["func"] == 4 and (4, r["record"]) not in seen:
+                seen.add((4, r["record"]))
+                rows.append({"record": r["record"], "func": 4, "name": r["name"], "unit": r.get("unit", ""), "scale": r.get("scale") or 1,
+                             "with_sign": r.get("with_sign", False), "chart": bool(r.get("watch")), "note": r.get("description", ""),
+                             "options": r.get("options", [])})
+        for st in rows:
+            st["id"] = "r%d_%d" % (st["func"], st["record"])
+        return rows
+
     def info(self):
         pe = self._pe()
-        return {"device": pe.get("device") or {}, "alarm": pe.get("alarm"),
-                "params": pe.get("params", []), "alarms": pe.get("alarms", [])}
+        known = set(t3d_help.LABELS)
+        groups = [{"id": g["id"], "name": g["name"], "description": g.get("description", ""), "icon": g.get("icon") or "mdi-cog",
+                   "registers": g.get("registers", [])} for g in pe.get("groups", [])]
+        in_group = {}
+        for g in groups:
+            for reg in g["registers"]:
+                in_group.setdefault(reg, g["id"])
+        ids = {g["id"] for g in groups}
+        params = []
+        for r in pe.get("params", []):
+            if r["func"] != 3:
+                continue
+            esc = float(r.get("scale") or 1)
+
+            def raw(v, esc=esc):
+                return None if v is None else int(round(float(v) / esc))
+            gid = r.get("group") or in_group.get(r["record"]) or "others"
+            if gid not in ids:
+                ids.add(gid)
+                groups.append({"id": gid, "name": str(M("generic_group_others")) if gid == "others" else gid, "description": "", "icon": "mdi-cog", "registers": []})
+            params.append({"record": r["record"], "name": r["name"], "description": "", "that_does": r.get("description", ""), "note": r.get("note", ""),
+                           "unit": r.get("unit", ""), "unit_scale": "", "scale": esc, "min": raw(r.get("min")), "max": raw(r.get("max")),
+                           "defaultValue": raw(r.get("defaultValue")), "mode": "ALL", "only_reading": r["access"] != "write", "of_motor": False,
+                           "digits": [], "options": r.get("options", []), "group": gid,
+                           "labels": [x for x in r.get("labels", []) if x in known], "risk": r.get("risk") or "medium"})
+        states = self._state_rows()
+        order, gstates = [], []
+        for st in states:
+            g = st.get("group") or "others"
+            if g not in order:
+                order.append(g)
+                gstates.append({"id": g, "name": str(M("generic_group_others")) if g == "others" else g})
+        al = pe.get("alarm") or {}
+        return {"generic": True, "device": pe.get("device") or {}, "alarm": pe.get("alarm"),
+                "can_clear_alarm": al.get("reset_register") is not None,
+                "groups": groups, "help": t3d_help.table(), "params": params, "partial": [], "no_exists": -1, "manual": "",
+                "alarms": [{"code": a["code"], "name": a["text"], "description": a.get("cause", ""), "solution": a.get("that_do", ""),
+                            "deleted": {"auto": "si", "procedure": "procedure", "restart": "no"}.get(a.get("clear") or "auto", "si"),
+                            "deleted_text": t3d_alarms.TEXT_DELETED[{"auto": "si", "procedure": "procedure", "restart": "no"}.get(a.get("clear") or "auto", "si")],
+                            "procedure": ""} for a in pe.get("alarms", [])],
+                "groups_states": gstates,
+                "states": [{"id": st["id"], "name": st["name"], "record": st["record"], "record_height": None, "unit": st.get("unit", ""),
+                            "scale": st.get("scale") or 1, "with_sign": st.get("with_sign", False), "group": st.get("group") or "others",
+                            "note": st.get("note", ""), "options": st.get("options", []), "chart": bool(st.get("chart")), "func": st["func"]}
+                           for st in states]}
+
+    def read_states(self, p=None):
+        """Every state of the profile, in blocks of consecutive registers (the bus is slow); one that does not answer is left out."""
+        out = {}
+        rows = sorted(self._state_rows(), key=lambda s: (s["func"], s["record"]))
+        i = 0
+        while i < len(rows):
+            j = i
+            while j + 1 < len(rows) and j - i < 7 and rows[j + 1]["func"] == rows[i]["func"] and rows[j + 1]["record"] == rows[j]["record"] + 1:
+                j += 1
+            block = rows[i:j + 1]
+            try:
+                vals = self.read_registers(block[0]["record"], len(block), function=block[0]["func"])
+            except Exception:
+                vals = []
+                for st in block:
+                    try:
+                        vals.append(self.read_registers(st["record"], 1, function=st["func"])[0])
+                    except Exception:
+                        vals.append(None)
+            for st, v in zip(block, vals):
+                if v is None:
+                    continue
+                if st.get("with_sign") and v & 0x8000:
+                    v -= 0x10000
+                esc = float(st.get("scale") or 1)
+                out[st["id"]] = round(v * esc, 6) if esc != 1 else v
+            i = j + 1
+        return {"values": out, "ts": time.time()}
+
+    def clear_alarm(self, p=None):
+        al = self._pe().get("alarm") or {}
+        if al.get("reset_register") is None:
+            raise ValueError(M("generic_alarm_cannot_be_cleared"))
+        self.write_register(int(al["reset_register"]), int(al["reset_value"]) & 0xFFFF)
+        time.sleep(0.1)
+        c = self.read_registers(int(al["record"]), 1, function=int(al.get("func") or 4))[0]
+        return {"alarm": c, "deleted": c == int(al.get("without_alarm") or 0)}
 
     def identify(self, p=None):
         info = self.bus.execute(lambda b: b.identify_device(self.address))
@@ -288,5 +392,10 @@ class Generic(Profile):
             "explore_cancel": (self.explore_cancel, False),
             "read_parameters": (self.read_params, False),
             "write_parameter": (self.write_param, True),
+            # the names the T3D-style page asks for (rs485_access.py already has them)
+            "read_params": (self.read_params, False),
+            "write_param": (self.write_param, True),
+            "read_states": (self.read_states, False),
+            "clear_alarm": (self.clear_alarm, True),
             "export_profile": (self.export_profile, False),
         }

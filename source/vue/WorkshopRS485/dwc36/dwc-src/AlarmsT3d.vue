@@ -13,7 +13,7 @@
 		<!-- filter by how it is cleared (also serves as a legend) -->
 		<div class="at3-filters">
 			<v-chip small :outlined="kind !== null" :color="kind === null ? 'primary' : ''" @click="kind = null">{{ $t('plugins.WorkshopRS485.alarmsT3d.all_n', { n: alarms.length }) }}</v-chip>
-			<v-chip v-for="(b, k) in DELETED" :key="k" small :outlined="kind !== k" :color="b.color" :text-color="kind === k ? 'white' : ''" :title="b.help" @click="kind = kind === k ? null : k">
+			<v-chip v-for="(b, k) in DELETED" :key="k" small :outlined="kind !== k" :color="kind === k ? look(b.color).color : b.color" :text-color="kind === k ? look(b.color).textColor : ''" :title="b.help" @click="kind = kind === k ? null : k">
 				{{ b.text }} &middot; {{ count(k) }}
 			</v-chip>
 		</div>
@@ -24,8 +24,8 @@
 				<div class="at3-cab" @click="toggle(a.code)">
 					<span class="at3-code">Err{{ a.code }}</span>
 					<span class="at3-name">{{ a.name }}</span>
-					<v-chip v-if="a.code === current" x-small color="error" text-color="white">{{ $t('plugins.WorkshopRS485.common.active_now_2') }}</v-chip>
-					<v-chip x-small :color="DELETED[a.deleted].color" text-color="white">{{ DELETED[a.deleted].text }}</v-chip>
+					<v-chip v-if="a.code === current" x-small color="error darken-2" text-color="white">{{ $t('plugins.WorkshopRS485.common.active_now_2') }}</v-chip>
+					<v-chip x-small :color="look(DELETED[a.deleted].color).color" :text-color="look(DELETED[a.deleted].color).textColor">{{ DELETED[a.deleted].text }}</v-chip>
 					<v-icon small>{{ open(a) ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
 				</div>
 				<div v-if="open(a)" class="at3-detail">
@@ -45,6 +45,7 @@
 <script>
 'use strict'
 
+import { chipLook } from './chip-look.js'
 import { deleted } from './api.js'
 
 export default {
@@ -74,6 +75,10 @@ export default {
 		}
 	},
 	methods: {
+		// the fill and the text of a filled chip, readable (chip-look.js)
+		look(name) {
+			return chipLook(name);
+		},
 		count(k) {
 			return this.alarms.filter(a => a.deleted === k).length;
 		},
