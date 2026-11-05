@@ -23,12 +23,13 @@
 					</div>
 				</div>
 				<div class="cab-buttons">
-					<v-btn small text :disabled="!can('rs485.save')" :title="lockWhy('rs485.save')" @click="$emit('edit')"><v-icon small left>mdi-pencil</v-icon>{{ $t('plugins.WorkshopRS485.common.edit') }}</v-btn>
+					<v-btn small text :disabled="!can('rs485.save')" @click="$emit('edit')"><v-icon small left>mdi-pencil</v-icon>{{ $t('plugins.WorkshopRS485.common.edit') }}</v-btn>
 					<v-btn icon small :title="collapsed ? $t('plugins.WorkshopRS485.device.show_details') : $t('plugins.WorkshopRS485.device.hide_details')" @click="fold(!collapsed)">
 						<v-icon>{{ collapsed ? 'mdi-chevron-down' : 'mdi-chevron-up' }}</v-icon>
 					</v-btn>
 				</div>
 			</div>
+			<lock-reason :min="reasonRole('device')" class="mt-1" />
 			<!-- absent on purpose / without communication: what happened and what to do -->
 			<div v-if="cfg.absent && cfg.active !== false" class="d-flex align-center flex-wrap text-body-2 mt-2" style="gap:6px">
 				<v-icon small color="grey">mdi-eye-off-outline</v-icon>
@@ -102,7 +103,7 @@
 						<v-btn small text @click="open(4)"><v-icon small left>mdi-history</v-icon>{{ $t('plugins.WorkshopRS485.device.history') }}</v-btn>
 					</div>
 				</div>
-				<div v-if="result" class="text-caption mt-1" :class="resultError ? 'error--text' : 'success--text'">{{ result }}</div>
+				<say-line :text="result || ''" :error="resultError" class="text-caption mt-1" />
 
 				<template v-if="!collapsed">
 					<v-tabs v-model="section" class="mt-3 sections" height="38">
@@ -142,7 +143,7 @@
 							</div>
 						</template>
 						<template v-else-if="!table">
-							<div v-if="tableError" class="text-body-2 error--text">{{ tableError }}</div>
+							<say-line v-if="tableError" :text="tableError" error class="text-body-2" />
 							<v-progress-linear v-else indeterminate height="2" />
 						</template>
 						<states-t3d v-else-if="section === 1" :disp-id="cfg.id" :table="table" :generic="!isT3d" />
@@ -192,16 +193,16 @@
 						<v-select v-model="manual.func" :items="[3, 4]" :label="$t('plugins.WorkshopRS485.common.function')" dense outlined hide-details style="max-width:110px" />
 						<v-btn small outlined :loading="busy === 'read'" @click="readManual()">{{ $t('plugins.WorkshopRS485.common.read') }}</v-btn>
 						<v-text-field v-model.number="manual.value" type="number" :label="$t('plugins.WorkshopRS485.common.value')" dense outlined hide-details style="max-width:120px" />
-						<v-btn small outlined :disabled="!can('rs485.action', { action: 'write_register' })" :title="lockWhy('rs485.action', { action: 'write_register' })" :color="armed === 'write' ? 'error' : ''" :loading="busy === 'write'" @click="arm('write', writeManual)">
+						<v-btn small outlined :disabled="!can('rs485.action', { action: 'write_register' })" :color="armed === 'write' ? 'error' : ''" :loading="busy === 'write'" @click="arm('write', writeManual)">
 							{{ armed === 'write' ? $t('plugins.WorkshopRS485.device.tap_again') : $t('plugins.WorkshopRS485.common.write') }}
 						</v-btn>
-						<span v-if="result" class="text-caption" :class="resultError ? 'error--text' : 'success--text'">{{ result }}</span>
+						<say-line :text="result || ''" :error="resultError" class="text-caption" />
 					</div>
 
 					<!-- identificacion Modbus (funcion 43): fabricante y modelo -->
 					<div class="text-subtitle-2 mt-4 mb-1"><v-icon small class="mr-1">mdi-card-account-details-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.which_device_it_is') }}</div>
 					<div class="d-flex flex-wrap align-center" style="gap:8px">
-						<v-btn small outlined :disabled="!can('rs485.action', { action: 'identify' })" :title="lockWhy('rs485.action', { action: 'identify' })" :loading="busy === 'identify'" @click="identify()">{{ $t('plugins.WorkshopRS485.device.identify') }}</v-btn>
+						<v-btn small outlined :disabled="!can('rs485.action', { action: 'identify' })" :loading="busy === 'identify'" @click="identify()">{{ $t('plugins.WorkshopRS485.device.identify') }}</v-btn>
 						<template v-if="ident">
 							<span class="text-body-2"><b>{{ ident.manufacturer || '?' }}</b> {{ ident.model }}<span v-if="ident.version" class="grey--text"> &middot; {{ $t('plugins.WorkshopRS485.device.version_n', { v: ident.version }) }}</span></span>
 							<v-btn x-small text color="primary" @click="$emit('rename', nameIdent)">{{ $t('plugins.WorkshopRS485.device.use_as_name') }}</v-btn>
@@ -223,7 +224,7 @@
 						<v-text-field v-model.number="exp.since" type="number" min="0" :label="$t('plugins.WorkshopRS485.common.from')" dense outlined hide-details style="max-width:100px" />
 						<v-text-field v-model.number="exp.until" type="number" min="0" :label="$t('plugins.WorkshopRS485.common.to')" dense outlined hide-details style="max-width:100px" />
 						<v-select v-model="exp.func" :items="functionsExplore" :label="$t('plugins.WorkshopRS485.device.type')" dense outlined hide-details style="max-width:220px" />
-						<v-btn v-if="!expState.active" small color="primary" :disabled="!can('rs485.action', { action: 'explore' })" :title="lockWhy('rs485.action', { action: 'explore' })" :loading="busy === 'explore'" @click="explore()"><v-icon small left>mdi-play</v-icon>{{ $t('plugins.WorkshopRS485.device.explore') }}</v-btn>
+						<v-btn v-if="!expState.active" small color="primary" :disabled="!can('rs485.action', { action: 'explore' })" :loading="busy === 'explore'" @click="explore()"><v-icon small left>mdi-play</v-icon>{{ $t('plugins.WorkshopRS485.device.explore') }}</v-btn>
 						<v-btn v-else small outlined color="warning" @click="exploreCancel()">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
 					</div>
 					<template v-if="expState.total">
@@ -268,10 +269,13 @@ import AlarmsT3d from './AlarmsT3d.vue'
 import HistoryT3d from './HistoryT3d.vue'
 import MachineProfile from './MachineProfile.vue'
 import HelpTip from './HelpTip.vue' // vue/_shared36
-import { action, info, deleted, states, does, textOf, canMixin, refusal } from './api.js'
+import { action, info, deleted, states, does, textOf, canMixin } from './api.js'
+import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import { exchangeExportJson } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData } from './device-exchange.js'
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 const HIST = 300;
 const PLEGADOS = 'workshopRS485Collapsed';
@@ -286,7 +290,10 @@ function readCollapsed() {
 
 export default {
 	mixins: [canMixin],
-	components: { HelpTip, DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['histTorque', 'histCurrent', 'histVars', 'table', 'tableError', 'result', 'resultError', 'manual', 'ident', 'identNo', 'expState', 'expList', 'lastReading'],
+	sessionErrors: ['tableError', 'resultError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
+	components: { SayLine, LockReason, HelpTip, DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
 	props: {
 		cfg: { type: Object, required: true },
 		live: { type: Object, default: null },
@@ -477,6 +484,9 @@ export default {
 		clearTimeout(this.expTimer);
 	},
 	methods: {
+		onSessionChange(kind) {
+			if (kind !== 'signed-out' && this.rich) this.loadTable()
+		},
 		ht(k) {
 			return this.$t('plugins.WorkshopRS485.device.help_' + k)
 		},
@@ -489,7 +499,7 @@ export default {
 			try {
 				this.table = await info(this.sendCode, this.cfg.id);
 			} catch (e) {
-				this.tableError = refusal(e) || i18n.t('plugins.WorkshopRS485.device.could_not_load_the_servo_table') + (e.message || e);
+				this.tableError = failureOf(e, m => i18n.t('plugins.WorkshopRS485.device.could_not_load_the_servo_table') + m, () => i18n.t('plugins.WorkshopRS485.common.act_read_table'));
 			}
 		},
 		textOf: textOf,
@@ -545,7 +555,7 @@ export default {
 				this.result = await fn();
 				this.resultError = false;
 			} catch (e) {
-				this.result = refusal(e) || e.message || String(e);
+				this.result = failureOf(e, m => m, () => i18n.t('plugins.WorkshopRS485.common.act_run'));
 				this.resultError = true;
 			} finally {
 				this.busy = null;
@@ -592,7 +602,7 @@ export default {
 				this.expState = await action(this.sendCode, this.cfg.id, 'explore', { since: this.exp.since, until: this.exp.until, func: this.exp.func });
 				this.followExploring();
 			} catch (e) {
-				this.result = refusal(e) || e.message || String(e);
+				this.result = failureOf(e, m => m, () => i18n.t('plugins.WorkshopRS485.common.act_run'));
 				this.resultError = true;
 			} finally {
 				this.busy = null;

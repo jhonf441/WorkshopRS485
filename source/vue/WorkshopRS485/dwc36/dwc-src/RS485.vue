@@ -14,11 +14,9 @@
 				</startup-panel>
 			</template>
 		</page-header>
-		<v-alert v-if="backendDown" dense text type="warning" class="mb-3">
-			{{ $t('plugins.WorkshopRS485.rS485.the_plugin_service_isn_t_responding') }}
-		</v-alert>
+		<session-notice v-if="backendDown" kind="down" :text="$t('plugins.WorkshopRS485.rS485.the_plugin_service_isn_t_responding')" />
 		<!-- the read was refused (no session / role too low): the cause, never "no devices yet" or "service not responding" -->
-		<v-alert v-if="refused" dense text type="info" icon="mdi-lock-outline" class="mb-3">{{ refused }}</v-alert>
+		<session-notice v-if="refusedKind" :kind="refusedKind" needed="technician" :action="$t('plugins.WorkshopRS485.common.act_read_config')" />
 		<div class="mb-3">
 				<div class="st-layout">
 				<side-tabs v-model="tab" :items="tabItems" />
@@ -47,7 +45,7 @@
 								<v-btn x-small outlined color="primary" @click="tab = 1">{{ $t('plugins.WorkshopRS485.rS485.see_and_add') }}</v-btn>
 							</div>
 						</v-alert>
-						<div v-if="!cfg.devices.length && !refused" class="text-body-2 grey--text mb-3">
+						<div v-if="!cfg.devices.length && !refusedKind" class="text-body-2 grey--text mb-3">
 							{{ $t('plugins.WorkshopRS485.rS485.no_devices_yet_add_the_first') }}
 						</div>
 						<dispositivo
@@ -58,8 +56,9 @@
 							@absent="markAbsent([d.id], $event)"
 							class="mb-3"
 						/>
-						<v-btn color="primary" small :disabled="!cfg.buses.length || !can('rs485.save')" :title="lockWhy('rs485.save')" @click="newItem()"><v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.common.add_device') }}</v-btn>
-						<v-btn class="ml-2" small outlined color="primary" :disabled="!cfg.buses.length || !can('rs485.save')" :title="lockWhy('rs485.save') || $t('plugins.WorkshopRS485.rS485.json_profile_hint')" @click="newItem(undefined, undefined, 'generic')"><v-icon small left>mdi-file-import-outline</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add_from_json_profile') }}</v-btn>
+						<v-btn color="primary" small :disabled="!cfg.buses.length || !can('rs485.save')" @click="newItem()"><v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.common.add_device') }}</v-btn>
+						<v-btn class="ml-2" small outlined color="primary" :disabled="!cfg.buses.length || !can('rs485.save')" :title="$t('plugins.WorkshopRS485.rS485.json_profile_hint')" @click="newItem(undefined, undefined, 'generic')"><v-icon small left>mdi-file-import-outline</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add_from_json_profile') }}</v-btn>
+						<lock-reason :min="reasonRole('list')" class="mt-2" />
 						<span v-if="!cfg.buses.length" class="text-caption grey--text ml-2">{{ $t('plugins.WorkshopRS485.rS485.first_create_a_bus_in_buses') }}</span>
 					</v-tab-item>
 
@@ -71,7 +70,7 @@
 								<v-icon :color="det.auto ? 'primary' : 'grey'">mdi-radar</v-icon>
 								<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.rS485.automatic_detection') }}</span><help-tip :title="ht('detection_title')" :what="ht('detection_what')" :why="ht('detection_why')" :how="ht('detection_how')" />
 								<v-spacer />
-								<v-btn small outlined color="primary" :loading="detecting.active" :disabled="detecting.active || !can('rs485.detect')" :title="lockWhy('rs485.detect')" @click="detect()">
+								<v-btn small outlined color="primary" :loading="detecting.active" :disabled="detecting.active || !can('rs485.detect')" @click="detect()">
 									<v-icon small left>mdi-magnify-scan</v-icon>{{ $t('plugins.WorkshopRS485.rS485.search_everything_now') }}
 								</v-btn>
 							</div>
@@ -79,6 +78,7 @@
 								<v-switch :input-value="det.auto" dense hide-details class="mt-1" :label="$t('plugins.WorkshopRS485.rS485.search_for_new_devices_automatically')" @change="saveDetection({ auto: $event })" />
 								<v-switch :input-value="det.add" :disabled="!det.auto" dense hide-details class="mt-1" :label="$t('plugins.WorkshopRS485.rS485.add_them_automatically_no_axis_they')" @change="saveDetection({ add: $event })" />
 							</div>
+							<lock-reason :min="reasonRole('detect')" class="mt-1" />
 							<div class="text-caption grey--text mt-2">
 								{{ $t('plugins.WorkshopRS485.rS485.detection_note', { min: Math.round(det.each_s / 60) || 1, max: det.until }) }} <b>{{ $t('plugins.WorkshopRS485.common.no_axis') }}</b>{{ $t(hasActivity ? 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you' : 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you_no_activity') }}
 							</div>
@@ -100,8 +100,8 @@
 										<template v-if="d.detail"> &middot; {{ textOf(d, 'detail') }}</template>
 									</div>
 								</div>
-								<v-btn x-small color="primary" outlined :disabled="!can('rs485.add_detected')" :title="lockWhy('rs485.add_detected')" :loading="busyDet === d.key" @click="addDetected(d)"><v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add') }}</v-btn>
-								<v-btn x-small text :disabled="!can('rs485.ignore_detected')" :title="lockWhy('rs485.ignore_detected')" @click="ignoreDetected(d)">{{ $t('plugins.WorkshopRS485.rS485.ignore') }}</v-btn>
+								<v-btn x-small color="primary" outlined :disabled="!can('rs485.add_detected')" :loading="busyDet === d.key" @click="addDetected(d)"><v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add') }}</v-btn>
+								<v-btn x-small text :disabled="!can('rs485.ignore_detected')" @click="ignoreDetected(d)">{{ $t('plugins.WorkshopRS485.rS485.ignore') }}</v-btn>
 							</div>
 						</v-sheet>
 
@@ -111,7 +111,8 @@
 							{{ $t('plugins.WorkshopRS485.rS485.the_service_isn_t_allowed_to') }}
 							<div class="command mt-1"><code>sudo usermod -aG dialout dsf &amp;&amp; sudo systemctl restart duetpluginservice</code></div>
 						</v-alert>
-						<div v-if="ports.ports === null" class="text-body-2 grey--text mb-3">{{ refused || $t('plugins.WorkshopRS485.rS485.could_not_read_the_list_of') }}</div>
+						<lock-reason :min="reasonRole('detect')" class="mb-2" />
+						<div v-if="ports.ports === null" class="text-body-2 grey--text mb-3"><template v-if="!refusedKind">{{ $t('plugins.WorkshopRS485.rS485.could_not_read_the_list_of') }}</template></div>
 						<div v-else-if="!ports.ports.length" class="text-body-2 grey--text mb-3">
 							{{ $t('plugins.WorkshopRS485.rS485.no_usb_rs485_adapter_connected_plug') }}
 						</div>
@@ -126,7 +127,7 @@
 								</div>
 								<v-chip v-if="busOfPort(p)" x-small color="success" outlined>{{ $t('plugins.WorkshopRS485.rS485.used_by_bus', { name: busOfPort(p).name }) }}</v-chip>
 								<template v-else>
-									<v-btn x-small outlined color="primary" :disabled="detecting.active || !can('rs485.detect')" :title="lockWhy('rs485.detect') || $t('plugins.WorkshopRS485.rS485.tries_every_speed_and_format')" @click="detect({ U: p.path })"><v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.detect') }}</v-btn>
+									<v-btn x-small outlined color="primary" :disabled="detecting.active || !can('rs485.detect')" :title="$t('plugins.WorkshopRS485.rS485.tries_every_speed_and_format')" @click="detect({ U: p.path })"><v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.detect') }}</v-btn>
 									<v-btn x-small text @click="addBus(p.path)">{{ $t('plugins.WorkshopRS485.rS485.create_bus_by_hand') }}</v-btn>
 								</template>
 							</v-sheet>
@@ -141,7 +142,7 @@
 						<div class="text-caption grey--text mb-2">
 							{{ $t('plugins.WorkshopRS485.rS485.bus_note') }}
 						</div>
-						<div v-if="!draftBuses.length && !refused" class="text-body-2 grey--text mb-3">{{ $t('plugins.WorkshopRS485.rS485.there_are_no_buses_yet') }}</div>
+						<div v-if="!draftBuses.length && !refusedKind" class="text-body-2 grey--text mb-3">{{ $t('plugins.WorkshopRS485.rS485.there_are_no_buses_yet') }}</div>
 
 						<v-card v-for="(b, i) in draftBuses" :key="b.id" outlined class="pa-3 mb-3 bus" :class="{ 'bus-changed': changed(b) }">
 							<!-- cabecera: estado + resumen -->
@@ -188,7 +189,7 @@
 
 							<!-- buscar equipos -->
 							<div class="d-flex align-center flex-wrap mt-3" style="gap:6px">
-								<v-btn x-small outlined :loading="scanning === b.id" :disabled="!!scanning || changed(b) || newWithoutSave(b) || !can('rs485.scan')" :title="lockWhy('rs485.scan')" @click="scan(b.id)">
+								<v-btn x-small outlined :loading="scanning === b.id" :disabled="!!scanning || changed(b) || newWithoutSave(b) || !can('rs485.scan')" @click="scan(b.id)">
 									<v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.find_devices_1_32') }}
 								</v-btn>
 								<span v-if="changed(b) || newWithoutSave(b)" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.rS485.save_the_changes_to_search_with') }}</span>
@@ -203,6 +204,7 @@
 									</template>
 								</template>
 							</div>
+							<lock-reason :min="reasonRole('scan')" class="mt-1" />
 
 							<!-- avanzado -->
 							<v-expansion-panels flat class="mt-2 advanced">
@@ -240,9 +242,10 @@
 							<span class="text-caption warning--text">{{ $t('plugins.WorkshopRS485.rS485.there_are_unsaved_changes_in_the') }}</span>
 							<v-spacer />
 							<v-btn small text @click="discardBuses()">{{ $t('plugins.WorkshopRS485.common.discard') }}</v-btn>
-							<v-btn small color="primary" :loading="saving" :disabled="!can('rs485.save')" :title="lockWhy('rs485.save')" @click="saveBuses()">{{ $t('plugins.WorkshopRS485.rS485.save_buses') }}</v-btn>
+							<v-btn small color="primary" :loading="saving" :disabled="!can('rs485.save')" @click="saveBuses()">{{ $t('plugins.WorkshopRS485.rS485.save_buses') }}</v-btn>
 						</div>
-						<div v-if="msg && !dialog" class="text-caption mt-2" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</div>
+						<lock-reason :min="reasonRole('buses')" class="mt-1" />
+						<say-line v-if="!dialog" :text="msg || ''" :error="msgError" class="text-caption mt-2" />
 					</v-tab-item>
 
 					<!-- ===== Como funciona ===== -->
@@ -282,12 +285,13 @@ import DeviceEditor from './DeviceEditor.vue'
 import StartupGuide from './StartupGuide.vue'
 import StartupPanel from './StartupPanel.vue' // start-up card (vue/_shared)
 import { signedOut } from './workshop-auth.js'
-import { whoami } from './workshop-api.js'
+import { currentIdentity, whoami } from './workshop-api.js'
 import PageHeader from './PageHeader.vue' // header of every page (vue/_shared)
 import { stepsGuide } from './guide-steps.js'
 import { rowsRS485 } from './startup-rows.js'
 import diagnosis, { verdicts, summaryLive } from './Diagnosis.vue'
-import { callService, states, BAUDS_T3D, optionsOf, does, textOf, canMixin, refusal } from './api.js'
+import { callService, states, BAUDS_T3D, optionsOf, does, textOf, canMixin } from './api.js'
+import { failureOf, refusalCauseNow } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import { pluginOf, pathExists } from './workshop-ids.js' // Id nuevo o viejo del plugin
 
 function copy(o) {
@@ -303,10 +307,16 @@ function withDefaults(buses) {
 import SideTabs from './SideTabs.vue'
 import HelpTip from './HelpTip.vue' // vue/_shared36
 import { sectionColor } from './section-colors.js' // the color of each section (--wf-sec)
+import LockReason from './LockReason.vue' // vue/_shared36
+import SessionNotice from './SessionNotice.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 export default {
 	mixins: [canMixin],
-	components: { HelpTip, PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
+	// what the previous person read stays in no data of the page: it is read again (onSessionChange) for the one who signs in
+	sessionData: ['cfg', 'profiles', 'ports', 'draftBuses', 'dialog', 'editingNew', 'formInitial', 'found', 'msg', 'msgError', 'refused', 'read'],
+	sessionErrors: ['msg', 'msgError', 'refused'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
+	components: { SayLine, SessionNotice, LockReason, HelpTip, PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
 	data() {
 		return {
 			tab: 0,
@@ -326,8 +336,7 @@ export default {
 			armed: null,
 			armedTimer: null,
 			backendLive: true,
-			needsLogin: false,
-			refused: '',	// the sentence of the cause when the config read was refused (no session / role); '' otherwise
+			refused: null,	// the error of the config read when it was refused (no session / role); null otherwise. Its cause and sentence are computed
 			read: false,	// the first read of the config ended (the start-up card says nothing before)
 			VERDICTS: verdicts,
 			bauds: BAUDS_T3D,
@@ -337,6 +346,17 @@ export default {
 	computed: {
 		secColor() {
 			return sectionColor(this.tab)
+		},
+		// the person must sign in: derived from the session (nobody signed in, or the service has people and this browser has no session), never stored
+		needsLogin() {
+			void this.identityTick;
+			const who = currentIdentity();
+			return signedOut() || !!(who && who.configured && who.login_required && !who.user);
+		},
+		// 'session' | 'role' while the config read is refused, else '': computed from the error, so it follows who is signed in
+		refusedKind() {
+			void this.identityTick;
+			return refusalCauseNow(this.refused);
 		},
 		backendDown() {
 			return !this.backendLive && !this.needsLogin;
@@ -471,24 +491,20 @@ export default {
 					this.draftBuses = withDefaults(this.cfg.buses);
 				}
 				this.backendLive = true;
-				this.needsLogin = false;
-				this.refused = '';
+				this.refused = null;
 			} catch (e) {
 				// a refusal (401 / 403) is not a plugin that does not answer: say the cause and keep the start-up card quiet
 				// (nothing was read, so it has nothing true to say yet)
-				const why = refusal(e);
-				if (why) {
-					this.refused = why;
+				if (refusalCauseNow(e)) {
+					this.refused = e;
 					this.backendLive = true;
-					this.needsLogin = signedOut();
 					this.read = false;
 					return;
 				}
-				this.refused = '';
+				this.refused = null;
 				this.backendLive = false;
-				// a missing or expired session is not a plugin that does not answer: ask the service who is signed in
-				const who = await whoami().catch(() => null);
-				this.needsLogin = signedOut() || !!(who && who.configured && who.login_required);
+				// a missing or expired session is not a plugin that does not answer: ask the service who is signed in (needsLogin reads it)
+				await whoami().catch(() => null);
 				this.read = false; // nothing was read: the start-up card must not say what it does not know (the alert above says why)
 				return;
 			}
@@ -611,7 +627,7 @@ export default {
 				this.msgError = false;
 				return true;
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_save') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_save') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save'));
 				this.msgError = true;
 				return false;
 			} finally {
@@ -705,7 +721,7 @@ export default {
 			try {
 				await callService(this.sendCode, { P: 'detect', ...(params || {}) });
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_search') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_search') + m, () => i18n.t('plugins.WorkshopRS485.common.act_search'));
 				this.msgError = true;
 			}
 		},
@@ -721,7 +737,7 @@ export default {
 					this.edit(nuevo);	// so that you give it a name and axis
 				}
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.rS485.could_not_add') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.rS485.could_not_add') + m, () => i18n.t('plugins.WorkshopRS485.common.act_add'));
 				this.msgError = true;
 			} finally {
 				this.busyDet = null;
@@ -731,7 +747,7 @@ export default {
 			try {
 				await callService(this.sendCode, { P: 'ignore_detected', C: d.key });
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.rS485.couldn_t') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.rS485.couldn_t') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save'));
 				this.msgError = true;
 			}
 		},
@@ -741,7 +757,7 @@ export default {
 				const r = await callService(this.sendCode, { P: 'scan', B: busId, D: 1, H: 32 });
 				this.$set(this.found, busId, r.found);
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_search') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_search') + m, () => i18n.t('plugins.WorkshopRS485.common.act_search'));
 				this.msgError = true;
 			} finally {
 				this.scanning = null;

@@ -30,7 +30,7 @@
 				</v-card-title>
 				<v-divider />
 				<v-card-text class="pt-4 startup-body">
-				<div v-if="locked" class="text-body-2 mb-3 startup-locked" role="status">{{ tt('locked') }}</div>
+				<lock-reason v-if="locked" kind="session" class="mb-3" />
 
 		<!-- the assistant: one pending row at a time -->
 		<div v-if="wizard" class="startup-wizard">
@@ -63,7 +63,7 @@
 				<div v-if="wizard.view === 'result'" class="mt-2">
 					<div v-for="m in wizard.msgs" :key="m.key" class="text-body-2">{{ ts(m.key, m.params) }}</div>
 					<div class="d-flex flex-wrap mt-2 startup-buttons">
-						<v-btn v-if="!isApply(stepCurrent)" small :disabled="locked" :title="locked ? tt('locked') : undefined" @click="editPath(wizard.plan ? wizard.plan.path : destination(stepCurrent))">{{ tt('edit') }}</v-btn>
+						<v-btn v-if="!isApply(stepCurrent)" small :disabled="locked" @click="editPath(wizard.plan ? wizard.plan.path : destination(stepCurrent))">{{ tt('edit') }}</v-btn>
 						<v-btn small @click="refresh(false)">{{ tt('assist_recheck') }}</v-btn>
 					</div>
 				</div>
@@ -86,26 +86,23 @@
 				<div v-else-if="stepCurrent.def.wizard" class="mt-2">
 					<div class="text-body-2 mb-2">{{ tt('questions_intro') }}</div>
 					<template v-for="q in questionsVisible">
-						<div :key="q.id" class="mb-1">
-							<v-select v-if="q.kind === 'list'" v-model="wizard.resp[q.id]" :items="options(q)" :label="tt(q.label)" :hint="q.help ? tt(q.help) : ''" persistent-hint dense outlined :error-messages="errorOf(q)" />
-							<div v-else-if="q.kind === 'si_no'">
-								<div class="text-body-2">{{ tt(q.label) }}</div>
-								<div class="d-flex startup-buttons">
-									<v-btn small :color="wizard.resp[q.id] ? 'success' : ''" @click="$set(wizard.resp, q.id, true)">{{ tt('yes') }}</v-btn>
-									<v-btn small :color="!wizard.resp[q.id] ? 'success' : ''" @click="$set(wizard.resp, q.id, false)">{{ tt('no') }}</v-btn>
-								</div>
-								<div v-if="q.help" class="text-caption grey--text">{{ tt(q.help) }}</div>
+						<wf-field :key="q.id" :id="'sq-' + q.id" :label="tt(q.label)" class="mb-3">
+							<template v-if="q.help" #help><help-tip :title="tt(q.label)" :what="tt(q.help)" /></template>
+							<v-select v-if="q.kind === 'list'" :id="'sq-' + q.id" v-model="wizard.resp[q.id]" :items="options(q)" :aria-label="tt(q.label)" hide-details="auto" dense outlined :error-messages="errorOf(q)" />
+							<div v-else-if="q.kind === 'si_no'" class="d-flex startup-buttons">
+								<v-btn small :color="wizard.resp[q.id] ? 'success' : ''" @click="$set(wizard.resp, q.id, true)">{{ tt('yes') }}</v-btn>
+								<v-btn small :color="!wizard.resp[q.id] ? 'success' : ''" @click="$set(wizard.resp, q.id, false)">{{ tt('no') }}</v-btn>
 							</div>
-							<v-text-field v-else v-model="wizard.resp[q.id]" :label="tt(q.label)" :hint="q.help ? tt(q.help) : ''" persistent-hint dense outlined :inputmode="q.kind === 'number' ? 'decimal' : 'text'" enterkeyhint="done" :error-messages="errorOf(q)" @keydown.enter="$event.target.blur()" />
-						</div>
+							<v-text-field v-else :id="'sq-' + q.id" v-model="wizard.resp[q.id]" :aria-label="tt(q.label)" hide-details="auto" dense outlined :inputmode="q.kind === 'number' ? 'decimal' : 'text'" enterkeyhint="done" :error-messages="errorOf(q)" @keydown.enter="$event.target.blur()" />
+						</wf-field>
 					</template>
 					<div v-if="wizard.failure" class="error--text text-body-2">{{ wizard.failure }}</div>
 				</div>
 
 				<!-- a row without assistant: the example, the editor, or only the explanation -->
 				<div v-else class="mt-2 d-flex flex-wrap align-center startup-buttons">
-					<v-btn v-if="stepCurrent.file && stepCurrent.state === 'missing' && stepCurrent.exists" small color="primary" :disabled="locked" :title="locked ? tt('locked') : tt('make_tip')" @click="create(stepCurrent)">{{ tt('make') }}</v-btn>
-					<v-btn v-else-if="stepCurrent.file && stepCurrent.state !== 'missing'" small color="primary" :disabled="locked" :title="locked ? tt('locked') : tt('edit_tip')" @click="edit(stepCurrent)">{{ tt('edit') }}</v-btn>
+					<v-btn v-if="stepCurrent.file && stepCurrent.state === 'missing' && stepCurrent.exists" small color="primary" :disabled="locked" :title="locked ? undefined : tt('make_tip')" @click="create(stepCurrent)">{{ tt('make') }}</v-btn>
+					<v-btn v-else-if="stepCurrent.file && stepCurrent.state !== 'missing'" small color="primary" :disabled="locked" :title="locked ? undefined : tt('edit_tip')" @click="edit(stepCurrent)">{{ tt('edit') }}</v-btn>
 					<div v-else-if="manual(stepCurrent)" style="width: 100%">
 						<div class="text-subtitle-2 mb-1">{{ tt('manual_title') }}</div>
 						<ol class="text-body-2 startup-steps"><li v-for="s in manual(stepCurrent).steps" :key="s">{{ tt(s) }}</li></ol>
@@ -123,8 +120,8 @@
 				</div>
 
 				<div class="d-flex flex-wrap mt-3 startup-buttons startup-nav">
-					<v-btn v-if="wizard.view === 'question' && stepCurrent.def.wizard && !isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="locked" :title="locked ? tt('locked') : undefined" @click="viewPreview(stepCurrent)">{{ tt('preview') }}</v-btn>
-					<v-btn v-if="wizard.view === 'question' && isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="wizard.writing || locked" :title="locked ? tt('locked') : undefined" @click="applyStep(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('apply_save') }}</v-btn>
+					<v-btn v-if="wizard.view === 'question' && stepCurrent.def.wizard && !isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="locked" @click="viewPreview(stepCurrent)">{{ tt('preview') }}</v-btn>
+					<v-btn v-if="wizard.view === 'question' && isApply(stepCurrent)" small color="primary" class="startup-btn" :disabled="wizard.writing || locked" @click="applyStep(stepCurrent)">{{ wizard.writing ? tt('saving') : tt('apply_save') }}</v-btn>
 					<v-btn v-if="notUsing(stepCurrent)" small outlined class="startup-btn" :title="tt('not_using_tip')" @click="skipNotUsing(stepCurrent)">{{ tt('not_using', { name: notUsingName(stepCurrent) }) }}</v-btn>
 					<v-btn small text class="startup-btn" :title="tt('assist_pause_tip')" @click="dialog = false">{{ tt('assist_pause') }}</v-btn>
 					<v-btn v-if="wizard.est.ids.length > 1" small :disabled="wizard.est.i === 0" @click="move('previous')">{{ tt('assist_prev') }}</v-btn>
@@ -149,7 +146,7 @@
 					<li v-for="m in missingList" :key="m.id">{{ missingSentence(m) }}</li>
 				</ul>
 			</div>
-			<v-btn v-if="stepsPending.length" block large color="primary" class="mb-4 startup-btn" :disabled="locked" :title="locked ? tt('locked') : tt('assist_tip')" @click="startWizard(null)"><v-icon small left>mdi-map-marker-path</v-icon>{{ wizard ? tt('guide_resume') : tt('guide_button') }}</v-btn>
+			<v-btn v-if="stepsPending.length" block large color="primary" class="mb-4 startup-btn" :disabled="locked" :title="locked ? undefined : tt('assist_tip')" @click="startWizard(null)"><v-icon small left>mdi-map-marker-path</v-icon>{{ wizard ? tt('guide_resume') : tt('guide_button') }}</v-btn>
 
 			<v-card v-for="g in groupsShown" :key="g.id" outlined class="mb-3 startup-group" :class="'startup-g-' + g.state">
 				<div class="d-flex align-start pa-3">
@@ -165,12 +162,12 @@
 						<v-icon x-small :color="color(f.state)" class="mr-2">mdi-circle</v-icon>
 						<span class="text-body-2 flex-grow-1 startup-rowtext"><template v-if="g.rows.length > 1">{{ f.def.title || tt(f.def.label) }} - </template><span :class="'startup-text-' + f.state">{{ textState(f) }}</span></span>
 						<v-btn v-if="f.def.action && f.state !== 'configured' && f.state !== 'na'" small outlined color="primary" @click="$emit('action', f.def.action)">{{ f.def.actionText }}</v-btn>
-						<v-btn v-if="f.file && (f.state === 'configured' || f.state === 'example')" small outlined :disabled="locked" :title="locked ? tt('locked') : tt('edit_tip')" @click="edit(f)">{{ tt('edit') }}</v-btn>
-						<v-btn v-else-if="f.file && f.state === 'missing' && f.exists && !f.def.wizard" small outlined :disabled="locked" :title="locked ? tt('locked') : tt('make_tip')" @click="create(f)">{{ tt('make') }}</v-btn>
+						<v-btn v-if="f.file && (f.state === 'configured' || f.state === 'example')" small outlined :disabled="locked" :title="locked ? undefined : tt('edit_tip')" @click="edit(f)">{{ tt('edit') }}</v-btn>
+						<v-btn v-else-if="f.file && f.state === 'missing' && f.exists && !f.def.wizard" small outlined :disabled="locked" :title="locked ? undefined : tt('make_tip')" @click="create(f)">{{ tt('make') }}</v-btn>
 					</div>
 				</div>
 				<div class="d-flex align-center flex-wrap px-2 pb-2 pt-1 startup-buttons">
-					<v-btn v-if="idsWizard(g).length" color="primary" class="startup-btn" :disabled="locked" :title="locked ? tt('locked') : tt('create_help_tip')" @click="startWizard(idsWizard(g))">{{ tt('create_help') }}</v-btn>
+					<v-btn v-if="idsWizard(g).length" color="primary" class="startup-btn" :disabled="locked" :title="locked ? undefined : tt('create_help_tip')" @click="startWizard(idsWizard(g))">{{ tt('create_help') }}</v-btn>
 					<v-btn v-if="g.rows.some(f => explanation(f.def))" text small color="primary" @click="$set(explained, g.id, !explained[g.id])">{{ explained[g.id] ? tt('what_is_hide') : tt('what_is') }}</v-btn>
 					<v-spacer />
 					<v-btn text small :title="tt('hide_tip')" @click="hideGroup(g)">{{ tt('hide') }}</v-btn>
@@ -207,6 +204,9 @@ import i18n from '../../i18n'
 import { api } from './workshop-api.js'
 import { signedOut } from './workshop-auth.js'
 import { roleMixin } from './role-mixin.js'
+import LockReason from './LockReason.vue'
+import WfField from './WfField.vue'
+import HelpTip from './HelpTip.vue'
 import { startupRows, startupSummary } from './startup.js'
 import {
 	startupExplanation, startupSteps, startupWizardStart, startupWizardMove, startupWizardSummary, startupVisible,
@@ -222,6 +222,7 @@ import {
 //   filaServicio   false = no "System service" row (default: it is shown)
 //   crearAlInicio  true = asks the service for the examples that were never made (once, when the page opens)
 export default {
+	components: { LockReason, WfField, HelpTip },
 	mixins: [roleMixin],
 	props: {
 		plugin: { type: String, required: true },
@@ -252,7 +253,7 @@ export default {
 			const service = this.serviceRow
 				? [{
 					id: 'service',
-					state: this.list === null ? 'missing' : 'configured',
+					state: this.list === null ? (this.locked ? 'session' : 'missing') : 'configured',
 					label: 'service',
 					help: 'service_tip',
 					what: 'service_what',
@@ -260,7 +261,7 @@ export default {
 					ifMissing: 'service_missing',
 					// signed out the service cannot be asked, so it is not said to be off: the row says the session is what is missing
 					// a refusal of the role is not a service that is off either (it used to say "not running" to an operator)
-					texts: { missing: this.locked ? 'service_sign_in' : this.refusal === 'role' ? 'service_role' : 'service_not_running' }
+					texts: { session: 'service_session', missing: this.refusal === 'role' ? 'service_role' : 'service_not_running' }
 				}]
 				: [];
 			return service.concat(this.defs);
@@ -291,7 +292,7 @@ export default {
 		},
 		// one card per FUNCTION: rows with the same grupo go together; a row without grupo is a card of its own
 		groups() {
-			const order = ['missing', 'example', 'configured', 'na'];
+			const order = ['missing', 'session', 'example', 'configured', 'na'];
 			const by = {};
 			const out = [];
 			this.rowsVisible.forEach(f => {
@@ -321,10 +322,10 @@ export default {
 		},
 		// cards with something to do first; the ready ones collapse in one line
 		groupsPending() {
-			return this.groups.filter(g => g.state === 'missing' || g.state === 'example');
+			return this.groups.filter(g => ['missing', 'session', 'example'].includes(g.state));
 		},
 		groupsReady() {
-			return this.groups.filter(g => g.state !== 'missing' && g.state !== 'example');
+			return this.groups.filter(g => !['missing', 'session', 'example'].includes(g.state));
 		},
 		groupsShown() {
 			return this.showReady ? this.groupsPending.concat(this.groupsReady) : this.groupsPending;
@@ -473,7 +474,7 @@ export default {
 			return this.tt(o || 'state_' + f.state, f.def.params);
 		},
 		color(state) {
-			return { configured: 'success', example: 'warning', missing: 'error', na: 'grey' }[state] || 'grey';
+			return { configured: 'success', example: 'warning', missing: 'error', session: 'info', na: 'grey' }[state] || 'grey';
 		},
 		explanation(def) {
 			return startupExplanation(def);
@@ -487,7 +488,7 @@ export default {
 				.map(p => ({ key: p[0], text: p[1] }));
 		},
 		isPending(f) {
-			return !!f && !f.hidden && !f.withoutData && (f.state === 'missing' || f.state === 'example');
+			return !!f && !f.hidden && !f.withoutData && ['missing', 'session', 'example'].includes(f.state);
 		},
 		destination(f) {
 			return startupDestination(f.def);
@@ -760,16 +761,16 @@ export default {
 	color: rgba(0, 0, 0, 0.74);
 }
 .startup-text-configured { color: #1b5e20; }
-.startup-text-example { color: #8a3b00; }
+.startup-text-example { color: var(--wf-n-down-text); }
 .startup-text-missing { color: #b71c1c; }
 .startup-text-na { color: #455a64; }
 .startup-state-configured { color: #1b5e20 !important; border-color: #1b5e20 !important; }
-.startup-state-example { color: #8a3b00 !important; border-color: #8a3b00 !important; }
+.startup-state-example { color: var(--wf-n-down-text) !important; border-color: var(--wf-n-down) !important; }
 .startup-state-missing { color: #b71c1c !important; border-color: #b71c1c !important; }
 .startup-state-na { color: #455a64 !important; border-color: #455a64 !important; }
+.startup-text-session, .startup-state-session { color: var(--wf-n-session-text) !important; border-color: var(--wf-n-session) !important; }
 .theme--dark .startup-sub { color: rgba(255, 255, 255, 0.78); }
 .theme--dark .startup-text-configured, .theme--dark .startup-state-configured { color: #a5d6a7 !important; border-color: #a5d6a7 !important; }
-.theme--dark .startup-text-example, .theme--dark .startup-state-example { color: #ffcc80 !important; border-color: #ffcc80 !important; }
 .theme--dark .startup-text-missing, .theme--dark .startup-state-missing { color: #ef9a9a !important; border-color: #ef9a9a !important; }
 .theme--dark .startup-text-na, .theme--dark .startup-state-na { color: #b0bec5 !important; border-color: #b0bec5 !important; }
 .startup-path {
@@ -792,5 +793,4 @@ export default {
 @media (max-width: 480px) {
 	.startup-icon-title, .startup-icon { display: none !important; }
 }
-.startup-locked { color: #ffcc80; border-left: 3px solid #ff8f00; padding: 4px 8px; background: rgba(255, 143, 0, 0.1); border-radius: 4px; }
 </style>

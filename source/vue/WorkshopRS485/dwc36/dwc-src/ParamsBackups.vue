@@ -7,8 +7,9 @@
 			<div class="text-subtitle-2 d-flex align-center">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}<help-tip :title="ht('backups_title')" :what="ht('backups_what')" :why="ht('backups_why')" :how="ht('backups_how')" /></div>
 			<div class="d-flex align-center mt-1" style="gap:6px">
 				<v-text-field v-model.trim="noteBackup" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.note_optional_e_g_before_tuning')" dense outlined hide-details />
-				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :title="lockWhy('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
+				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</div>
+			<lock-reason :min="reasonRole('backups')" />
 			<div class="text-subtitle-2 mt-3">{{ $t('plugins.WorkshopRS485.paramsT3d.on_the_sd') }} <span class="grey--text text-caption">(sys/workshop/data/rs485-backups/)</span></div>
 			<div v-if="!backups.length" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.paramsT3d.there_are_no_backups_of_this') }}</div>
 			<div v-for="r in backups" :key="r.name" class="pt3-backup">
@@ -18,7 +19,7 @@
 				</div>
 				<v-btn x-small text :disabled="!!r.error" @click="compareWith(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.compare') }}</v-btn>
 				<v-btn x-small text :disabled="!!r.error" @click="restore(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.restore') }}</v-btn>
-				<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" x-small icon :disabled="!can('rs485.backup_delete')" :title="lockWhy('rs485.backup_delete')" :color="armedDelete === r.name ? 'error' : ''" @click="touchDeleteBackup(r)"><v-icon x-small>mdi-delete</v-icon></v-btn>
+				<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" x-small icon :disabled="!can('rs485.backup_delete')" :color="armedDelete === r.name ? 'error' : ''" @click="touchDeleteBackup(r)"><v-icon x-small>mdi-delete</v-icon></v-btn>
 			</div>
 			<v-divider class="my-2" />
 			<div class="d-flex flex-wrap" style="gap:6px">
@@ -35,17 +36,21 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { callService, canMixin, refusal } from './api.js'
+import { callService, canMixin } from './api.js'
+import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { backupData, exportBackup, importBackup, isBackup } from './params-backup.js'
 import HelpTip from './HelpTip.vue' // vue/_shared36
+import LockReason from './LockReason.vue' // vue/_shared36
 
 // The backups of the parameters of one T3D servo: the ones the service keeps on the SD (save, compare, restore, delete) and the file of the
 // exchange standard (download, load with a preview). Loading or restoring does not write to the servo: the page puts the values in its list of
 // pending changes (events `restore` and `load`); comparing shows the differences in the page (`compare`).
 export default { mixins: [canMixin],
-	components: { HelpTip },
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['backups', 'noteBackup'],
+	components: { LockReason, HelpTip },
 	props: {
 		dispId: { type: String, required: true },
 		values: { type: Object, required: true }, // what was read: { "<register>": { value } | { error } }
@@ -80,7 +85,7 @@ export default { mixins: [canMixin],
 				const r = await callService(this.sendCode, { P: 'backups', I: this.dispId });
 				this.backups = r.backups || [];
 			} catch (e) {
-				this.say(refusal(e) || this.tp('could_not_list_the_backups') + (e.message || e), true);
+				this.say(failureOf(e, m => this.tp('could_not_list_the_backups') + m, () => i18n.t('plugins.WorkshopRS485.common.act_backups')), true);
 			}
 		},
 		async saveBackup() {
@@ -91,7 +96,7 @@ export default { mixins: [canMixin],
 				this.noteBackup = '';
 				await this.loadBackups();
 			} catch (e) {
-				this.say(refusal(e) || this.tp('could_not_save_the_backup') + (e.message || e), true);
+				this.say(failureOf(e, m => this.tp('could_not_save_the_backup') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save_backup')), true);
 			} finally {
 				this.savingBackup = false;
 			}
@@ -108,7 +113,7 @@ export default { mixins: [canMixin],
 				this.$emit('compare', await this.readBackup(r));
 				this.menuBackup = false;
 			} catch (e) {
-				this.say(refusal(e) || this.tp('could_not_read_the_backup') + (e.message || e), true);
+				this.say(failureOf(e, m => this.tp('could_not_read_the_backup') + m, () => i18n.t('plugins.WorkshopRS485.common.act_backups')), true);
 			}
 		},
 		async restore(r) {
@@ -116,7 +121,7 @@ export default { mixins: [canMixin],
 				this.$emit('restore', await this.readBackup(r));
 				this.menuBackup = false;
 			} catch (e) {
-				this.say(refusal(e) || this.tp('could_not_read_the_backup') + (e.message || e), true);
+				this.say(failureOf(e, m => this.tp('could_not_read_the_backup') + m, () => i18n.t('plugins.WorkshopRS485.common.act_backups')), true);
 			}
 		},
 		touchDeleteBackup(r) {
@@ -128,7 +133,7 @@ export default { mixins: [canMixin],
 			}
 			this.armedDelete = null;
 			callService(this.sendCode, { P: 'backup_delete', N: r.name }).then(() => this.loadBackups()).catch(e => {
-				this.say(refusal(e) || this.tp('could_not_delete', { error: e.message || String(e) }), true);
+				this.say(failureOf(e, m => this.tp('could_not_delete', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_delete_backup')), true);
 			});
 		},
 		// the parameters read as a file of the exchange standard (envelope workshop-rs485-servo-params)

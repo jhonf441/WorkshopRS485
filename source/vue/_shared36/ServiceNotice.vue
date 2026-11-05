@@ -8,6 +8,8 @@
 			<div>
 				<div class="font-weight-medium">{{ problem.title }}</div>
 				<div class="text-body-2 mt-1">{{ problem.text }}</div>
+				<!-- the way out in one tap: the plugins page of DWC, where WorkshopService is installed and started -->
+				<v-btn small outlined color="warning" class="mt-2 service-notice-action" to="/Settings/Plugins"><v-icon small left>mdi-puzzle-outline</v-icon>{{ ts('service_notice_open_plugins') }}</v-btn>
 				<div class="text-body-2 mt-2">
 					<a href="#" @click.prevent="see = !see">{{ see ? ts('service_notice_hide') : ts('service_notice_show') }}</a>
 				</div>

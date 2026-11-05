@@ -21,7 +21,7 @@
 			<params-backups :disp-id="dispId" :values="values" :no-exists="noExists" :rows="rows" :edited="edited" :has-reading="hasReading" :reading="reading"
 				@compare="compareWith" @restore="applyAsChanges" @load="applyAsChanges" @message="say" />
 		</div>
-		<div v-if="msg" class="text-body-2 mt-2" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</div>
+		<say-line :text="msg || ''" :error="msgError" class="text-body-2 mt-2" />
 
 		<!-- filtros y comparacion -->
 		<div v-if="hasReading" class="d-flex align-center flex-wrap mt-2" style="gap:6px">
@@ -97,6 +97,7 @@
 			</div>
 		</div>
 
+		<lock-reason :min="reasonRole('params')" class="mt-2" />
 		<!-- barra de cambios -->
 		<div v-if="pending.length || pendingEeprom" class="pt3-changes">
 			<template v-if="pending.length">
@@ -107,7 +108,7 @@
 				</div>
 				<v-checkbox v-if="hasInvalid && atLeast('admin')" v-model="force" dense hide-details class="mt-0 mr-3" :label="$t('plugins.WorkshopRS485.paramsT3d.force_invalid_values')" color="error" />
 				<v-btn small text @click="discard()">{{ $t('plugins.WorkshopRS485.common.discard') }}</v-btn>
-				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" :title="lockWhy('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
+				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
 					<v-icon small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.write_to_the_servo') }}
 				</v-btn>
 				<help-tip :title="ht('write_title')" :what="ht('write_what')" :why="ht('write_why')" :if-missing="ht('write_missing')" :how="ht('write_how')" />
@@ -117,7 +118,7 @@
 					<v-icon small color="warning" class="mr-1">mdi-alert</v-icon>
 					{{ $t('plugins.WorkshopRS485.paramsT3d.n_written_but', { n: pendingEeprom }) }} <b>{{ $t('plugins.WorkshopRS485.paramsT3d.not_saved') }}</b>{{ $t('plugins.WorkshopRS485.paramsT3d.they_re_lost_when_the_servo') }}
 				</div>
-				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" :title="lockWhy('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
+				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
 					<v-icon small left>mdi-content-save</v-icon>{{ armed ? $t('plugins.WorkshopRS485.paramsT3d.tap_again_store_in_the_servo') : $t('plugins.WorkshopRS485.paramsT3d.save_to_eeprom') }}
 				</v-btn>
 				<help-tip :title="ht('eeprom_title')" :what="ht('eeprom_what')" :why="ht('eeprom_why')" :how="ht('eeprom_how')" />
@@ -133,26 +134,33 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { action, info, canMixin, refusal } from './api.js'
+import { action, info, canMixin } from './api.js'
+import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import { TOTAL, BY_READING, three, validate } from './params-model.js'
 import ParamCard from './ParamCard.vue'
 import ParamsBackups from './ParamsBackups.vue'
 import HelpTip from './HelpTip.vue' // vue/_shared36
 import { backupChanges } from './params-backup.js';
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
+import { createSessionCache } from './session-cache.js'
 
 // Values read per device: they survive closing/opening the panel (the whole
 // servo is not reread every time).
-const CACHE = {};
+const CACHE = createSessionCache(); // what was read, only while the same person is signed in
 
 const tp = (key, params) => i18n.t('plugins.WorkshopRS485.paramsT3d.' + key, params);
 
 export default { mixins: [canMixin],
-	components: { HelpTip, ParamCard, ParamsBackups },
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1); onSessionChange loads the table again for the one who signs in
+	sessionData: ['table', 'groups', 'partial', 'generic', 'regList', 'manual', 'labels', 'risks', 'iconsGroup', 'functionsDi', 'functionsDo', 'values', 'hourReading', 'edited', 'written', 'comparing', 'msg', 'msgError'],
+	sessionErrors: ['msg', 'msgError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
+	components: { SayLine, LockReason, HelpTip, ParamCard, ParamsBackups },
 	props: {
 		dispId: { type: String, required: true }
 	},
 	data() {
-		const c = CACHE[this.dispId] || {};
+		const c = CACHE.get(this.dispId);
 		return {
 			TOTAL,
 			table: [],
@@ -291,6 +299,17 @@ export default { mixins: [canMixin],
 		}
 	},
 	async mounted() {
+		await this.start();
+	},
+	beforeDestroy() {
+		clearTimeout(this.armedTimer);
+		CACHE.set(this.dispId, { values: this.values, hour: this.hourReading, written: this.written, comparing: this.comparing });
+	},
+	methods: {
+		onSessionChange(kind) {
+			if (kind !== 'signed-out') this.start();
+		},
+		async start() {
 		try {
 			const r = await info(this.sendCode, this.dispId);
 			this.table = r.params || [];
@@ -307,7 +326,7 @@ export default { mixins: [canMixin],
 			this.functionsDi = a.functions_di || {};
 			this.functionsDo = a.functions_do || {};
 		} catch (e) {
-			this.msg = refusal(e) || tp('could_not_load_the_table') + (e.message || e);
+			this.msg = failureOf(e, m => tp('could_not_load_the_table') + m, () => i18n.t('plugins.WorkshopRS485.common.act_read_table'));
 			this.msgError = true;
 			return;
 		}
@@ -315,11 +334,6 @@ export default { mixins: [canMixin],
 			this.readTodo();
 		}
 	},
-	beforeDestroy() {
-		clearTimeout(this.armedTimer);
-		CACHE[this.dispId] = { values: this.values, hour: this.hourReading, written: this.written, comparing: this.comparing };
-	},
-	methods: {
 		ht(k) {
 			return this.$t('plugins.WorkshopRS485.paramsT3d.help_' + k)
 		},
@@ -412,7 +426,7 @@ export default { mixins: [canMixin],
 				const d = new Date();
 				this.hourReading = tp('read_at', { time: String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') });
 			} catch (e) {
-				this.msg = refusal(e) || tp('reading_stopped_check', { error: e.message || String(e) });
+				this.msg = failureOf(e, m => tp('reading_stopped_check', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_read_table'));
 				this.msgError = true;
 				if (Object.keys(nuevos).length) {
 					this.values = { ...this.values, ...nuevos };
@@ -466,7 +480,7 @@ export default { mixins: [canMixin],
 				this.msg = tp('saved_in_the_servo_eeprom_the');
 				this.msgError = false;
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_save') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_save') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save'));
 				this.msgError = true;
 			} finally {
 				this.savingEeprom = false;

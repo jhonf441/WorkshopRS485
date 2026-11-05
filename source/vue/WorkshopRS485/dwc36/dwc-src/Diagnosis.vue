@@ -12,10 +12,11 @@
 				<span class="text-subtitle-1 font-weight-medium">{{ b.name || b.id }}</span>
 				<v-chip x-small outlined :color="colorOf(liveSummary(b).code)">{{ VERDICTS[liveSummary(b).code].short }}</v-chip>
 				<v-spacer />
-				<v-btn small outlined color="primary" :loading="busy === b.id" :disabled="!!busy || !can('rs485.diagnose')" :title="lockWhy('rs485.diagnose')" @click="diagnose(b.id)">
+				<v-btn small outlined color="primary" :loading="busy === b.id" :disabled="!!busy || !can('rs485.diagnose')" @click="diagnose(b.id)">
 					<v-icon small left>mdi-stethoscope</v-icon>{{ $t('plugins.WorkshopRS485.common.diagnose') }}
 				</v-btn>
 			</div>
+			<lock-reason :min="reasonRole('diagnose')" class="mt-1" />
 			<div v-if="busy === b.id" class="text-caption mt-2">{{ $t('plugins.WorkshopRS485.diagnosis.checking_the_adapter_and_asking_each') }}</div>
 
 			<template v-if="results[b.id]">
@@ -113,7 +114,7 @@
 			</template>
 		</v-sheet>
 		<div v-if="!buses.length" class="text-body-2 dim mb-3">{{ $t('plugins.WorkshopRS485.diagnosis.no_buses_yet_create_one_in') }}</div>
-		<div v-if="error" class="text-caption error--text mb-3">{{ error }}</div>
+		<say-line :text="error || ''" error class="text-caption mb-3" />
 
 		<!-- ===== barrido ===== -->
 		<v-sheet outlined rounded class="pa-3">
@@ -138,13 +139,14 @@
 				<v-col cols="4" sm="2"><v-text-field v-model.number="until" type="number" min="1" max="247" :label="$t('plugins.WorkshopRS485.common.to')" dense outlined hide-details :disabled="sweep.active" /></v-col>
 				<v-col cols="4" sm="3"><v-text-field v-model.number="timeoutMs" type="number" min="30" max="2000" :label="$t('plugins.WorkshopRS485.diagnosis.wait_ms')" dense outlined hide-details :disabled="sweep.active" /></v-col>
 				<v-col cols="12" sm="5" class="d-flex align-center" style="gap:8px">
-					<v-btn v-if="!sweep.active" small color="primary" :disabled="!where || !!sending || !can('rs485.sweep')" :title="lockWhy('rs485.sweep')" :loading="sending" @click="start()">
+					<v-btn v-if="!sweep.active" small color="primary" :disabled="!where || !!sending || !can('rs485.sweep')" :loading="sending" @click="start()">
 						<v-icon small left>mdi-magnify-scan</v-icon>{{ $t('plugins.WorkshopRS485.diagnosis.find') }}
 					</v-btn>
 					<v-btn v-else small text @click="cancel()">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
 					<span class="text-caption dim"><span>{{ $t('plugins.WorkshopRS485.diagnosis.takes_up_to') }}</span> {{ estimated }}</span>
 				</v-col>
 			</v-row>
+			<lock-reason :min="reasonRole('sweep')" />
 			<div v-if="isDuet" class="text-caption dim mt-1">{{ $t('plugins.WorkshopRS485.diagnosis.on_the_duet_s_rs485_the') }}</div>
 
 			<template v-if="sweep.total">
@@ -181,8 +183,11 @@ import i18n from '../../i18n'
 
 'use strict'
 
-import { callService, BAUDS_T3D, does, textOf, canMixin, refusal } from './api.js'
+import { callService, BAUDS_T3D, does, textOf, canMixin } from './api.js'
+import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import HelpTip from './HelpTip.vue' // vue/_shared36
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 // What each verdict says (dsf/diagnostico.py) and what to do. Fixed texts
 // so the translator finds them.
@@ -234,8 +239,11 @@ export function summaryLive(busCfg, busLive, disps, live) {
 }
 
 export default {
-	components: { HelpTip },
+	components: { SayLine, LockReason, HelpTip },
 	mixins: [canMixin],
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['results', 'error'],
+	sessionErrors: ['error'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
 	props: {
 		cfg: Object,
 		state: Object,
@@ -337,7 +345,7 @@ export default {
 					this.$set(this.results, d.bus, d);
 				}
 			} catch (e) {
-				this.error = refusal(e) || i18n.t('plugins.WorkshopRS485.diagnosis.could_not_diagnose') + (e.message || e);
+				this.error = failureOf(e, m => i18n.t('plugins.WorkshopRS485.diagnosis.could_not_diagnose') + m, () => i18n.t('plugins.WorkshopRS485.common.act_diagnose'));
 			} finally {
 				this.busy = null;
 			}
@@ -354,7 +362,7 @@ export default {
 			try {
 				await callService(this.sendCode, { P: 'sweep', J: p });
 			} catch (e) {
-				this.error = refusal(e) || i18n.t('plugins.WorkshopRS485.common.could_not_search') + (e.message || e);
+				this.error = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_search') + m, () => i18n.t('plugins.WorkshopRS485.common.act_search'));
 			} finally {
 				this.sending = false;
 			}
@@ -363,7 +371,7 @@ export default {
 			try {
 				await callService(this.sendCode, { P: 'sweep_cancel' });
 			} catch (e) {
-				this.error = refusal(e) || i18n.t('plugins.WorkshopRS485.diagnosis.could_not_cancel') + (e.message || e);
+				this.error = failureOf(e, m => i18n.t('plugins.WorkshopRS485.diagnosis.could_not_cancel') + m, () => i18n.t('plugins.WorkshopRS485.common.act_cancel_search'));
 			}
 		},
 		key(e) {

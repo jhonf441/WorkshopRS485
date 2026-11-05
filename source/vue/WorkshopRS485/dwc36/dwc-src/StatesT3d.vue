@@ -2,9 +2,10 @@
 	<div class="et3">
 		<div class="et3-bar">
 			<div class="et3-summary">
-				<template v-if="error">
+				<lock-reason v-if="error && errorCause" :kind="errorCause" need="technician" :action="errorAction" />
+				<template v-else-if="error">
 					<v-icon small color="warning" class="mr-1">mdi-alert</v-icon>
-					<span class="warning--text">{{ error }}</span>
+					<span class="warning--text">{{ errorText }}</span>
 				</template>
 				<template v-else-if="hour">
 					<span class="et3-heartbeat" :class="{ paused: paused }" />
@@ -70,11 +71,19 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { action, hex, refusal } from './api.js'
+import { action, hex } from './api.js'
+import { failureOf, failureActionNow, failureCauseNow, failureNow } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
+import { roleMixin } from './role-mixin.js' // vue/_shared36
+import LockReason from './LockReason.vue' // vue/_shared36
 
 const TONE_CLASS = { ok: 'success--text', warn: 'warning--text', error: 'error--text' };
 
 export default {
+	mixins: [roleMixin],
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1); the next cycle reads it again
+	sessionData: ['values', 'hour', 'error'],
+	sessionErrors: ['error'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
+	components: { LockReason },
 	props: {
 		dispId: { type: String, required: true },
 		table: { type: Object, required: true },
@@ -96,6 +105,19 @@ export default {
 		};
 	},
 	computed: {
+		// the cause and the sentence of the last failure, computed from the error it came with (they follow the role and the language)
+		errorCause() {
+			void this.identityTick
+			return failureCauseNow(this.error)
+		},
+		errorAction() {
+			void this.identityTick
+			return failureActionNow(this.error)
+		},
+		errorText() {
+			void this.identityTick
+			return failureNow(this.error, 'technician')
+		},
 		groups() {
 			return this.table.groups_states || [];
 		},
@@ -144,7 +166,7 @@ export default {
 					this.hour = [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':');
 					this.error = null;
 				} catch (e) {
-					this.error = refusal(e) || i18n.t('plugins.WorkshopRS485.statesT3d.no_answer_from_the_servo') + (e.message || e);
+					this.error = failureOf(e, m => i18n.t('plugins.WorkshopRS485.statesT3d.no_answer_from_the_servo') + m, () => i18n.t('plugins.WorkshopRS485.common.act_read_states'));
 				}
 			}
 			// no response: retry more slowly so as not to fill the bus queue

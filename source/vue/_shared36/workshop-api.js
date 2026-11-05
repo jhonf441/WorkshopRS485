@@ -18,6 +18,7 @@
 // and the call is repeated with confirm: true; cancelled -> ApiError "cancelled".
 
 import i18n from '../../i18n'
+import { ts } from './shared-t.js'
 import { idInstalled, pluginOf } from './workshop-ids.js'
 import { serviceText } from './service-text.js'
 import { adoptToken, askLoginNow, authHeaders, currentIdentity, ensureLogin, logoutWith, loginWith, onIdentity, recentGesture, refreshIdentity, signedOut, startKeepalive, workshopCan, workshopRole } from './workshop-auth.js'
@@ -55,7 +56,6 @@ const EN = {
 	pinMissing: 'Write your name and PIN.',
 	pinWrong: 'Wrong name or PIN.',
 	loginCancelled: 'Identification is needed to continue.',
-	signInNeeded: 'Not authorized: you need to sign in.',
 	forbidden_role: 'Your role ({role}) does not allow this: {needed} is needed.',
 	forbidden_mode: 'Your role cannot operate in {mode} mode: ask the administrator to enable it.',
 	forbidden_mode_unknown: 'The mode of the machine is not known and your role only operates some modes.',
@@ -204,7 +204,7 @@ export async function api(op, args, opts = {}) {
 			// the person signed in while this call was in flight (another plugin's dialog): repeat it with the new session, do not ask twice
 			const now = authHeaders()['X-Workshop-Token'] || ''
 			if ((now && now !== sentToken) || await ensureLogin(rawCall, t)) continue;
-			throw fail(new ApiError('login_required', t('signInNeeded'), 401, j));
+			throw fail(new ApiError('login_required', ts('notice_session_reason'), 401, j));
 		}
 		if (e.code === 'forbidden') throw fail(forbiddenError(e, j));
 		if (e.code === 'confirm_required' && !confirm && !opts.noDialog) {

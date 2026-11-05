@@ -9,28 +9,15 @@
 				<div class="d-flex align-center flex-wrap" style="gap:6px">
 					<span class="pt3-num">P-{{ three(p.record) }}</span>
 					<span class="text-body-1 font-weight-medium">{{ p.name }}</span>
-					<v-tooltip v-if="p.risk && risks[p.risk]" bottom>
-						<template v-slot:activator="{ on }">
-							<v-icon small :color="risks[p.risk].color" v-on="on">{{ risks[p.risk].icon }}</v-icon>
-						</template>
-						{{ risks[p.risk].text }}
-					</v-tooltip>
+					<v-icon v-if="p.risk && risks[p.risk]" small :color="risks[p.risk].color">{{ risks[p.risk].icon }}</v-icon><help-tip v-if="p.risk && risks[p.risk]" :title="p.name">{{ risks[p.risk].text }}</help-tip>
 					<v-chip v-if="written[p.record]" x-small color="warning" text-color="black"><v-icon x-small left>mdi-content-save-alert</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.written_not_in_eeprom') }}</v-chip>
 					<v-chip v-if="differentOfFactory(p)" x-small color="amber darken-2" text-color="black"><v-icon x-small left>mdi-pencil</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.changed') }}</v-chip>
 				</div>
 				<div class="pt3-labels">
-					<v-tooltip v-for="e in labelsOf(p)" :key="e.id" bottom max-width="280">
-						<template v-slot:activator="{ on }">
-							<span class="pt3-label" :class="e.color" v-on="on" @click="chooseLabel(e.id)"><v-icon x-small dark>{{ e.icon }}</v-icon>{{ e.text }}</span>
-						</template>
-						{{ e.help }}
-					</v-tooltip>
-					<v-tooltip v-if="p.kind === 'doc' && p.mode" bottom>
-						<template v-slot:activator="{ on }">
-							<span class="pt3-mode" :class="{ used: modeUsed(p) }" v-on="on"><v-icon x-small>{{ modeUsed(p) ? 'mdi-check' : 'mdi-minus' }}</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.mode_n', { mode: p.mode }) }}</span>
-						</template>
-						{{ modeUsed(p) ? $t('plugins.WorkshopRS485.paramsT3d.has_effect_in_mode') : $t('plugins.WorkshopRS485.paramsT3d.no_effect_in_mode', { modes: textMode(p.mode) }) }}
-					</v-tooltip>
+					<span v-for="e in labelsOf(p)" :key="e.id" class="pt3-label" :class="e.color" @click="chooseLabel(e.id)"><v-icon x-small dark>{{ e.icon }}</v-icon>{{ e.text }}</span>
+					<help-tip v-if="labelsOf(p).length" :title="p.name"><p v-for="e in labelsOf(p)" :key="e.id" class="mb-1"><b>{{ e.text }}</b>: {{ e.help }}</p></help-tip>
+					<span v-if="p.kind === 'doc' && p.mode" class="pt3-mode" :class="{ used: modeUsed(p) }"><v-icon x-small>{{ modeUsed(p) ? 'mdi-check' : 'mdi-minus' }}</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.mode_n', { mode: p.mode }) }}</span>
+					<help-tip v-if="p.kind === 'doc' && p.mode" :title="$t('plugins.WorkshopRS485.paramsT3d.mode_n', { mode: p.mode })">{{ modeUsed(p) ? $t('plugins.WorkshopRS485.paramsT3d.has_effect_in_mode') : $t('plugins.WorkshopRS485.paramsT3d.no_effect_in_mode', { modes: textMode(p.mode) }) }}</help-tip>
 				</div>
 			</div>
 		</div>
@@ -119,10 +106,12 @@ import i18n from '../../i18n'
 'use strict'
 
 import { three, unitOf, show, textOption, posSpan, modeUsed, textMode } from './params-model.js'
+import HelpTip from './HelpTip.vue' // vue/_shared36
 
 // One parameter of the T3D servo panel: its name, labels and risk, the value in the servo, what the manual allows and the field to change it.
 // The page (ParamsT3d.vue) is `page`: it owns the state and the actions; nothing here talks to the servo.
 export default {
+	components: { HelpTip },
 	props: {
 		p: { type: Object, required: true },
 		page: { type: Object, required: true }

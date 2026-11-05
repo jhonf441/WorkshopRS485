@@ -1,22 +1,19 @@
 <template>
-	<!-- A quiet line for the sections the person cannot see (2026-11-04, AWS-console rule: nothing disappears without a word).
-	     Give it ALL the sections of the page ({ min }); it shows only when some need more than the person has. -->
-	<div v-if="hidden" class="hidden-note text-caption" role="note">
-		<v-icon x-small left>mdi-lock-outline</v-icon>
-		<span>{{ ts('lock_hidden_note') }}</span>
-		<a v-if="out" href="#" class="ml-1" @click.prevent="signIn">{{ ts('header_sign_in') }}</a>
-	</div>
+	<!-- A quiet reason for the sections the person cannot see (AWS-console rule: nothing disappears without a word). The sign-in call is the chip of
+	     the page bar, not here. Give it ALL the sections of the page ({ min }); it shows only when some need more than the person has. -->
+	<lock-reason v-if="hidden" class="hidden-note" :kind="kind" :text="ts('notice_hidden')" />
 </template>
 
 <script>
 'use strict'
 
+import LockReason from './LockReason.vue'
 import { ts } from './shared-t.js'
 import { roleMixin } from './role-mixin.js'
-import { askLogin } from './workshop-api.js'
 import { signedOut } from './workshop-auth.js'
 
 export default {
+	components: { LockReason },
 	mixins: [roleMixin],
 	props: { sections: { type: Array, default: () => [] } },
 	computed: {
@@ -24,23 +21,11 @@ export default {
 			void this.identityTick
 			return this.sections.some(s => s && s.min && !this.atLeast(s.min))
 		},
-		out() {
+		kind() {
 			void this.identityTick
-			return signedOut()
+			return signedOut() ? 'session' : 'role'
 		}
 	},
-	methods: {
-		ts,
-		signIn() {
-			askLogin()
-		}
-	}
+	methods: { ts }
 }
 </script>
-
-<style scoped>
-.hidden-note {
-	opacity: 0.75;
-	padding: 4px 8px;
-}
-</style>

@@ -7,8 +7,6 @@ import i18n from '../../i18n'
 // llamarServicio() turns them into the operation rs485.<name> with named arguments.
 
 import { api } from './workshop-api.js'
-import { ts } from './shared-t.js'
-import { refusalText } from './refusal.js'
 
 export { canMixin } from './roles-mixin.js' // can(op, args): what the role may do (the backend decides)
 
@@ -35,12 +33,6 @@ export async function callService(sendCode, params) {
 		if (e && e.status) err.status = e.status;
 		throw err;
 	}
-}
-
-// The sentence of the cause when a call was refused (no session: sign in; role too low: its own message), '' for a real failure.
-// A page writes `refusal(e) || 'Could not X: ' + e.message`.
-export function refusal(e) {
-	return refusalText(e, ts('lock_signed_out'), ts('err_role'));
 }
 
 export function action(sendCode, dispId, nombre, data) {

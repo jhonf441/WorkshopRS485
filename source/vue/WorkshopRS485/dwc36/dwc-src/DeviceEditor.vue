@@ -149,7 +149,7 @@
 						</v-btn>
 					</template>
 				</div>
-				<div v-if="msg" class="text-caption mt-2" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</div>
+				<say-line :text="msg || ''" :error="msgError" class="text-caption mt-2" />
 			</v-card-text>
 			<v-divider />
 			<v-card-actions class="flex-wrap" style="gap:6px">
@@ -157,12 +157,13 @@
 				<v-switch :input-value="!!form.absent" :disabled="!form.active" :label="$t('plugins.WorkshopRS485.deviceEditor.absent_on_purpose')" dense hide-details class="mt-0 mr-4"
 					:title="$t('plugins.WorkshopRS485.deviceEditor.absent_hint')" @change="putAbsent" /><help-tip :title="ht('absent_title')" :what="ht('absent_what')" :why="ht('absent_why')" :how="ht('absent_how')" />
 				<v-spacer />
-				<v-btn v-if="!newItem" small text :disabled="!can('rs485.save')" :title="lockWhy('rs485.save')" :color="armed ? 'error' : 'grey'" @click="armDelete">
+				<v-btn v-if="!newItem" small text :disabled="!can('rs485.save')" :color="armed ? 'error' : 'grey'" @click="armDelete">
 					{{ armed ? $t('plugins.WorkshopRS485.deviceEditor.tap_again_to_remove_it') : $t('plugins.WorkshopRS485.deviceEditor.remove_device') }}
 				</v-btn>
 				<v-btn small text @click="$emit('input', false)">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
-				<v-btn small color="primary" :loading="saving" :disabled="!valid || !can('rs485.save')" :title="lockWhy('rs485.save')" @click="$emit('save', copy(form))">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
+				<v-btn small color="primary" :loading="saving" :disabled="!valid || !can('rs485.save')" @click="$emit('save', copy(form))">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</v-card-actions>
+			<lock-reason :min="reasonRole('editor')" class="px-4 pb-2" />
 		</v-card>
 	</v-dialog>
 </template>
@@ -182,14 +183,19 @@ import { pathExists } from './workshop-ids.js' // the Lights plugin is optional:
 import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData, profilePlan, busMismatch, importDeviceProfile } from './device-exchange.js'
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 function copy(o) {
 	return JSON.parse(JSON.stringify(o));
 }
 
 export default {
-	components: { HelpTip },
+	components: { SayLine, LockReason, HelpTip },
 	mixins: [canMixin],
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['form', 'profileMsg', 'profileError', 'profileNotices'],
+	sessionErrors: ['profileMsg', 'profileError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
 	props: {
 		value: Boolean,
 		initial: Object,	// dispositivo a editar (copia) o borrador del nuevo
@@ -200,7 +206,7 @@ export default {
 		found: Object,
 		scanning: Boolean,
 		saving: Boolean,
-		msg: String,
+		msg: [String, Object], // a text, or a failure kept as { error, label } (SayLine computes its sentence)
 		msgError: Boolean
 	},
 	data() {

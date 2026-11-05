@@ -6,9 +6,9 @@
 // A row (def) has a file ({ id, archivo: 'macros/mode/selectfff.g' }: its state comes from examples.list) or a check
 // ({ id, estado: 'configured' | 'missing' | 'na' }: the page decides). aplica: false = grey, "does not apply to your
 // machine" (no strip, no camera, no meter: never an error). The states are the ones of the service (ejemplos.py):
-//   configured (green), example (orange: all commented, still to configure), missing (red), na (grey).
+//   configured (green), example (orange: all commented, still to configure), missing (red), session (blue: nobody is signed in, so it cannot be checked), na (grey).
 
-export const states = ['configured', 'example', 'missing', 'na'];
+export const states = ['configured', 'example', 'missing', 'session', 'na'];
 
 // archivos: [{archivo, estado}] from examples.list, or null when the service did not answer.
 // ocultos: ids of the rows the person hid.
@@ -37,6 +37,6 @@ export function startupRows(defs, files, hidden) {
 // {total, pendientes, listo} over the rows that are shown and apply (hidden, grey and without-data rows do not count)
 export function startupSummary(rows) {
 	const count = (rows || []).filter(f => !f.hidden && !f.withoutData && f.state !== 'na');
-	const pending = count.filter(f => f.state === 'example' || f.state === 'missing').length;
+	const pending = count.filter(f => f.state === 'example' || f.state === 'missing' || f.state === 'session').length;
 	return { total: count.length, pending: pending, ready: pending === 0 };
 }

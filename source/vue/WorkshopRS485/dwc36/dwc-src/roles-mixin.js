@@ -6,7 +6,7 @@
 
 import { roleMixin } from './role-mixin.js'
 import { roleAtLeast } from './role-view.js'
-import { neededRole } from './roles.js'
+import { neededRole, lowestMissing } from './roles.js'
 
 export const canMixin = {
 	mixins: [roleMixin],
@@ -16,11 +16,10 @@ export const canMixin = {
 			const need = neededRole(op, args)
 			return need === null || roleAtLeast(need)
 		},
-		// why a call is locked for this person, by cause (no session / role too low): '' when they may; for the title of a button
-		lockWhy(op, args) {
+		// the role a card names in its ONE reason (<lock-reason :min="reasonRole('device')" />): '' when the person may do everything in it
+		reasonRole(group) {
 			void this.identityTick
-			const need = neededRole(op, args)
-			return need === null || roleAtLeast(need) ? '' : this.lockText(need)
+			return lowestMissing(group, roleAtLeast)
 		}
 	}
 }

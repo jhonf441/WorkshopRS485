@@ -19,8 +19,9 @@
 				<v-btn small outlined :loading="reading" :disabled="!params.length" @click="readAll()"><v-icon small left>mdi-download</v-icon>{{ $t('plugins.WorkshopRS485.machineProfile.read_all') }}</v-btn>
 				<help-tip :title="ht('params_title')" :what="ht('params_what')" :why="ht('params_why')" :how="ht('params_how')" />
 				<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.machineProfile.name_register_or_word')" dense outlined hide-details clearable class="pe-search" />
-				<span v-if="msg" class="text-caption" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</span>
+				<say-line :text="msg || ''" :error="msgError" class="text-caption" />
 			</div>
+			<lock-reason :min="reasonRole('profile')" class="px-3" />
 			<div v-if="!params.length" class="text-body-2 grey--text pa-3">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_has_no_parameters') }}</div>
 			<v-simple-table v-else dense class="pe-table">
 				<thead>
@@ -57,7 +58,7 @@
 									<template v-if="r.access === 'write'">
 										<v-select v-if="r.options && r.options.length" v-model="newItem" :items="r.options.map(o => ({ text: o.value + ' = ' + o.text, value: o.value }))" dense outlined hide-details class="pe-new-sel" @click.stop />
 										<v-text-field v-else v-model.number="newItem" type="number" step="any" :label="$t('plugins.WorkshopRS485.machineProfile.new_value') + (r.unit ? ' (' + r.unit + ')' : '')" dense outlined hide-details class="pe-new" @click.stop />
-										<v-btn x-small outlined :color="armed === key(r) ? 'error' : ''" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" :title="lockWhy('rs485.action', { action: 'write_parameter' })" :loading="busy === key(r) + 'e'" @click.stop="arm(r)">
+										<v-btn x-small outlined :color="armed === key(r) ? 'error' : ''" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" :loading="busy === key(r) + 'e'" @click.stop="arm(r)">
 											{{ armed === key(r) ? $t('plugins.WorkshopRS485.machineProfile.tap_again_to_write') : $t('plugins.WorkshopRS485.common.write') }}
 										</v-btn>
 									</template>
@@ -103,12 +104,17 @@ import i18n from '../../i18n'
 import { mapActions } from 'vuex'
 import { action, canMixin } from './api.js'
 import HelpTip from './HelpTip.vue' // vue/_shared36
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 const ACCION = { pause: i18n.t('plugins.WorkshopRS485.machineProfile.pauses_the_job'), notify: i18n.t('plugins.WorkshopRS485.common.only_warns'), nothing: i18n.t('plugins.WorkshopRS485.machineProfile.does_nothing') };
 
 export default {
-	components: { HelpTip },
+	components: { SayLine, LockReason, HelpTip },
 	mixins: [canMixin],
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['values', 'msg', 'msgError', 'newItem'],
+	sessionErrors: ['msg', 'msgError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
 	props: {
 		cfg: { type: Object, required: true },
 		live: { type: Object, default: null }

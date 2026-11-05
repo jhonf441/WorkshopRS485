@@ -46,3 +46,32 @@ export function neededRole(op, args) {
 	if (need !== null && a.data && typeof a.data === 'object' && a.data.force) need = 'admin';
 	return need;
 }
+
+// The calls of each card of the page: the card shows ONE reason (<lock-reason :min="reasonRole('device')">) for the group, not one per button.
+export const CALLS = {
+	device: [['rs485.save'], ['rs485.action', { action: 'write_register' }], ['rs485.action', { action: 'identify' }], ['rs485.action', { action: 'explore' }]],
+	editor: [['rs485.save']],
+	diagnose: [['rs485.diagnose']],
+	sweep: [['rs485.sweep']],
+	history: [['rs485.clear_history']],
+	profile: [['rs485.action', { action: 'write_parameter' }]],
+	backups: [['rs485.backup_save'], ['rs485.backup_delete']],
+	params: [['rs485.action', { action: 'write_param' }], ['rs485.action', { action: 'save_eeprom' }]],
+	list: [['rs485.save']],
+	detect: [['rs485.detect'], ['rs485.add_detected'], ['rs485.ignore_detected']],
+	scan: [['rs485.scan']],
+	buses: [['rs485.save']]
+};
+
+const ORDER = ['viewer', 'operator', 'technician', 'admin'];
+
+// The lowest role that would unlock something of the group the person cannot do now ('' when they can do all): the card names it.
+export function lowestMissing(group, atLeast) {
+	let best = '';
+	for (const [op, args] of CALLS[group] || []) {
+		const need = neededRole(op, args);
+		if (need === null || atLeast(need)) continue;
+		if (!best || ORDER.indexOf(need) < ORDER.indexOf(best)) best = need;
+	}
+	return best;
+}

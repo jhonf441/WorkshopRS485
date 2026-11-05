@@ -29,11 +29,12 @@
 			</v-btn-toggle>
 			<v-spacer />
 			<v-btn small outlined :loading="loading" @click="load()"><v-icon small left>mdi-refresh</v-icon>{{ $t('plugins.WorkshopRS485.common.refresh') }}</v-btn>
-			<v-btn small text :color="armed ? 'error' : ''" :disabled="!events.length || !can('rs485.clear_history')" :title="lockWhy('rs485.clear_history')" @click="touchDelete()">
+			<v-btn small text :color="armed ? 'error' : ''" :disabled="!events.length || !can('rs485.clear_history')" @click="touchDelete()">
 				<v-icon small left>mdi-delete-sweep</v-icon>{{ armed ? $t('plugins.WorkshopRS485.historyT3d.tap_again_to_clear') : $t('plugins.WorkshopRS485.historyT3d.clear_history') }}
 			</v-btn>
 		</div>
-		<div v-if="msg" class="text-body-2 mt-2" :class="msgError ? 'error--text' : 'success--text'">{{ msg }}</div>
+		<say-line :text="msg || ''" :error="msgError" class="text-body-2 mt-2" />
+		<lock-reason :min="reasonRole('history')" class="mt-1" />
 
 		<div v-if="!rows.length && !loading" class="empty mt-3">
 			<v-icon large color="grey">mdi-history</v-icon>
@@ -72,12 +73,19 @@ import i18n from '../../i18n'
 'use strict'
 
 import { mapActions } from 'vuex'
-import { callService, canMixin, refusal } from './api.js'
+import { callService, canMixin } from './api.js'
+import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
+import LockReason from './LockReason.vue' // vue/_shared36
+import SayLine from './SayLine.vue' // vue/_shared36
 
 const p2 = n => String(n).padStart(2, '0');
 
 export default {
+	components: { SayLine, LockReason },
 	mixins: [canMixin],
+	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
+	sessionData: ['events', 'msg', 'msgError'],
+	sessionErrors: ['msg', 'msgError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
 	props: {
 		dispId: { type: String, required: true },
 		alarms: { type: Array, default: () => [] }
@@ -153,6 +161,9 @@ export default {
 		clearTimeout(this.armedTimer);
 	},
 	methods: {
+		onSessionChange(kind) {
+			if (kind !== 'signed-out') this.load()
+		},
 		...mapActions('machine', ['sendCode']),
 		async load() {
 			this.loading = true;
@@ -161,7 +172,7 @@ export default {
 				const r = await callService(this.sendCode, { P: 'history', I: this.dispId });
 				this.events = (r.history || []).slice();
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.historyT3d.could_not_read_the_history') + (e.message || e);
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.historyT3d.could_not_read_the_history') + m, () => i18n.t('plugins.WorkshopRS485.common.act_read_history'));
 				this.msgError = true;
 			} finally {
 				this.loading = false;
@@ -184,7 +195,7 @@ export default {
 				this.msgError = false;
 				await this.load();
 			} catch (e) {
-				this.msg = refusal(e) || i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: e.message || String(e) });
+				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_clear_history'));
 				this.msgError = true;
 			}
 		},
