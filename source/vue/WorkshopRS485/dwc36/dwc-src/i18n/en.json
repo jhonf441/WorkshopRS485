@@ -55,7 +55,8 @@
 		"code_or_word_e_g_39": "Code or word (e.g. 39, encoder)",
 		"n_manual_codes": "{n} codes from the manual",
 		"all_n": "All · {n}",
-		"source_note": "Source: T3D V2.0 commissioning manual, chapter 5. The servo panel shows the same code (Err-- = no alarm). Encoder and power alarms cannot be cleared over the bus: remove the cause and power cycle the servo. Tap a row to see what to do."
+		"source_note": "Source: T3D V2.0 commissioning manual, chapter 5. The servo panel shows the same code (Err-- = no alarm). Encoder and power alarms cannot be cleared over the bus: remove the cause and power cycle the servo. Tap a row to see what to do.",
+		"source_note_generic": "The alarms and what to do come from the device profile (from its maker's manual). Tap a row to see what to do."
 	},
 	"api": {
 		"remove_the_cause_and_power_cycle": "remove the cause and power-cycle",
@@ -410,11 +411,13 @@
 		"undocumented": "undocumented",
 		"no_answer_from_the_servo": "No answer from the servo: ",
 		"values_that_just_changed_are_highlighted": "Values that just changed are highlighted for a moment. These are the servo's monitoring variables (d- menu on the panel), read over RS485 once per second while this tab is open. Hover over a row to see the Modbus register.",
+		"values_changed_generic": "Values that just changed are highlighted for a moment. These are the states the device profile defines, read over RS485 once per second while this tab is open. Hover over a row to see the Modbus register.",
 		"no_alarm": "no alarm",
 		"pause": "Pause",
 		"follow": "Follow",
 		"search_e_g_speed_di": "Search (e.g. speed, DI)",
 		"reading_servo_states": "Reading servo states...",
+		"reading_states_generic": "Reading device states...",
 		"live": "Live",
 		"paused": "Paused",
 		"low_high_32_bits": "{low} (low) + {high} (high), 32 bits",

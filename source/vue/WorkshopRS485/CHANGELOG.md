@@ -1,5 +1,9 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.6.17 -- 2026-11-05
+
+- Darker primary button hover, Workbench save label, generic RS485 notes
+
 ## 2.6.16 -- 2026-11-05
 
 - Sign out no longer reopens the PIN dialog

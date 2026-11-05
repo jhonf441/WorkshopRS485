@@ -37,7 +37,7 @@
 			<div v-if="!visible.length" class="text-body-2 grey--text pa-4">{{ $t('plugins.WorkshopRS485.common.nothing_matches_the_search') }}</div>
 		</div>
 		<div class="text-caption grey--text mt-2">
-			{{ $t('plugins.WorkshopRS485.alarmsT3d.source_note') }}
+			{{ $t(generic ? 'plugins.WorkshopRS485.alarmsT3d.source_note_generic' : 'plugins.WorkshopRS485.alarmsT3d.source_note') }}
 		</div>
 	</div>
 </template>
@@ -51,7 +51,9 @@ import { deleted } from './api.js'
 export default {
 	props: {
 		alarms: { type: Array, required: true },
-		current: { type: Number, default: 0 }
+		current: { type: Number, default: 0 },
+		// a device that is not the servo: the note does not quote the servo manual
+		generic: { type: Boolean, default: false }
 	},
 	data() {
 		return { filter: '', kind: null, openMap: {}, DELETED: deleted };

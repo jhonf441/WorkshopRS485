@@ -11,7 +11,7 @@
 					{{ paused ? $t('plugins.WorkshopRS485.statesT3d.paused') : $t('plugins.WorkshopRS485.statesT3d.live') }} &middot; {{ hour }}
 				</template>
 				<template v-else>
-					<v-progress-circular indeterminate size="16" width="2" class="mr-2" />{{ $t('plugins.WorkshopRS485.statesT3d.reading_servo_states') }}
+					<v-progress-circular indeterminate size="16" width="2" class="mr-2" />{{ $t(generic ? 'plugins.WorkshopRS485.statesT3d.reading_states_generic' : 'plugins.WorkshopRS485.statesT3d.reading_servo_states') }}
 				</template>
 			</div>
 			<v-spacer />
@@ -59,7 +59,7 @@
 		</div>
 		<div v-if="!groupsVisible.length" class="text-body-2 grey--text pa-3">{{ $t('plugins.WorkshopRS485.common.nothing_matches_the_search') }}</div>
 		<div class="text-caption grey--text mt-2">
-			{{ $t('plugins.WorkshopRS485.statesT3d.values_that_just_changed_are_highlighted') }}
+			{{ $t(generic ? 'plugins.WorkshopRS485.statesT3d.values_changed_generic' : 'plugins.WorkshopRS485.statesT3d.values_that_just_changed_are_highlighted') }}
 		</div>
 	</div>
 </template>
@@ -77,7 +77,9 @@ const TONE_CLASS = { ok: 'success--text', warn: 'warning--text', error: 'error--
 export default {
 	props: {
 		dispId: { type: String, required: true },
-		table: { type: Object, required: true }
+		table: { type: Object, required: true },
+		// a device that is not the servo: the notes do not talk about the servo panel
+		generic: { type: Boolean, default: false }
 	},
 	data() {
 		return {

@@ -55,7 +55,8 @@
 		"code_or_word_e_g_39": "Código o palabra (ej. 39, encoder)",
 		"n_manual_codes": "{n} códigos del manual",
 		"all_n": "Todas · {n}",
-		"source_note": "Fuente: manual de puesta en marcha del T3D V2.0, capítulo 5. El panel del servo muestra el mismo código (Err-- = sin alarma). Las alarmas de encoder y de potencia no se borran por comunicación: hay que quitar la causa y apagar y prender el servo. Toca una fila para ver qué hacer."
+		"source_note": "Fuente: manual de puesta en marcha del T3D V2.0, capítulo 5. El panel del servo muestra el mismo código (Err-- = sin alarma). Las alarmas de encoder y de potencia no se borran por comunicación: hay que quitar la causa y apagar y prender el servo. Toca una fila para ver qué hacer.",
+		"source_note_generic": "Las alarmas y su solución vienen del perfil del equipo (del manual de su fabricante). Toca una fila para ver qué hacer."
 	},
 	"api": {
 		"remove_the_cause_and_power_cycle": "quitar la causa y apagar / prender",
@@ -410,11 +411,13 @@
 		"undocumented": "no documentada",
 		"no_answer_from_the_servo": "Sin respuesta del servo: ",
 		"values_that_just_changed_are_highlighted": "Los valores que acaban de cambiar se resaltan un momento. Son las variables de monitoreo del servo (menú d- del panel), leídas por RS485 una vez por segundo mientras esta pestaña está abierta. Pasa el mouse por una fila para ver el registro Modbus.",
+		"values_changed_generic": "Los valores que acaban de cambiar se resaltan un momento. Son los estados que define el perfil del equipo, leídos por RS485 una vez por segundo mientras esta pestaña está abierta. Pasa el mouse por una fila para ver el registro Modbus.",
 		"no_alarm": "sin alarma",
 		"pause": "Pausar",
 		"follow": "Seguir",
 		"search_e_g_speed_di": "Buscar (ej. velocidad, DI)",
 		"reading_servo_states": "Leyendo estados del servo...",
+		"reading_states_generic": "Leyendo estados del equipo...",
 		"live": "En vivo",
 		"paused": "En pausa",
 		"low_high_32_bits": "{low} (bajo) + {high} (alto), 32 bits",

@@ -145,9 +145,9 @@
 							<div v-if="tableError" class="text-body-2 error--text">{{ tableError }}</div>
 							<v-progress-linear v-else indeterminate height="2" />
 						</template>
-						<states-t3d v-else-if="section === 1" :disp-id="cfg.id" :table="table" />
+						<states-t3d v-else-if="section === 1" :disp-id="cfg.id" :table="table" :generic="!isT3d" />
 						<params-t3d v-else-if="section === 2" :disp-id="cfg.id" />
-						<alarms-t3d v-else-if="section === 3" :alarms="table.alarms || []" :current="v.alarm || 0" />
+						<alarms-t3d v-else-if="section === 3" :alarms="table.alarms || []" :current="v.alarm || 0" :generic="!isT3d" />
 						<history-t3d v-else-if="section === 4" :disp-id="cfg.id" :alarms="table.alarms || []" />
 					</div>
 					<div class="d-flex flex-wrap align-center mt-3" style="gap:8px">
