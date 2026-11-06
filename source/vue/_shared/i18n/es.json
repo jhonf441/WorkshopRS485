@@ -543,7 +543,7 @@
 		"lights_lights_states_stopped_settings_plugins_lights": "Luces y estados está detenido (Ajustes > Complementos > Luces y estados): el servicio no controla las luces",
 		"lights_no_frames": "sin cuadros",
 		"lights_pin_of_strip_to_test_missing": "Falta el pin de la tira que se quiere probar",
-		"lights_saved_but_could_not_write_lights_g": "Guardado en config.json, pero no se pudo escribir sys/workshop/macros/lights.g: {e}",
+		"lights_saved_but_could_not_write_lights_g": "Guardado en config.json, pero no se pudo escribir sys/workshop/macros/system/lights.g: {e}",
 		"lights_scene_default_name": "Escena",
 		"lights_scene_dim": "Tenue",
 		"lights_scene_job": "Trabajo",

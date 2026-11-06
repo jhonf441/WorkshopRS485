@@ -16,7 +16,7 @@
 		</page-header>
 		<session-notice v-if="backendDown" kind="down" :text="$t('plugins.WorkshopRS485.rS485.the_plugin_service_isn_t_responding')" />
 		<!-- the read was refused (no session / role too low): the cause, never "no devices yet" or "service not responding" -->
-		<session-notice v-if="refusedKind" :kind="refusedKind" needed="technician" :action="$t('plugins.WorkshopRS485.common.act_read_config')" />
+		<session-notice v-if="refusedKind" :kind="refusedKind" needed="operator" :action="$t('plugins.WorkshopRS485.common.act_read_config')" />
 		<div class="mb-3">
 				<div class="st-layout">
 				<side-tabs v-model="tab" :items="tabItems" />
@@ -111,7 +111,6 @@
 							{{ $t('plugins.WorkshopRS485.rS485.the_service_isn_t_allowed_to') }}
 							<div class="command mt-1"><code>sudo usermod -aG dialout dsf &amp;&amp; sudo systemctl restart duetpluginservice</code></div>
 						</v-alert>
-						<lock-reason :min="reasonRole('detect')" class="mb-2" />
 						<div v-if="ports.ports === null" class="text-body-2 grey--text mb-3"><template v-if="!refusedKind">{{ $t('plugins.WorkshopRS485.rS485.could_not_read_the_list_of') }}</template></div>
 						<div v-else-if="!ports.ports.length" class="text-body-2 grey--text mb-3">
 							{{ $t('plugins.WorkshopRS485.rS485.no_usb_rs485_adapter_connected_plug') }}

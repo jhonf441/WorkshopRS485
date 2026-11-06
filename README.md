@@ -1,5 +1,11 @@
 # WorkshopRS485 (RS485 devices)
 
+<!-- notice:start -->
+> **Read before installing.** This plugin runs with real permissions on your machine. Read [SECURITY.md](SECURITY.md) and the section **Permissions and what it changes** below: they say what it can do, which files it writes, and what it sends outside your network (nothing, unless you turn a feature on).
+
+> **The Workshop users and roles do not protect DWC itself.** Anyone who can open DWC on your network can send G-code, move the machine, edit `config.g` and upload files, whatever the Workshop roles say: Duet has no roles of its own. Set a DWC password (`M551`) and keep the machine on a network you trust.
+<!-- notice:end -->
+
 
 
 Page `/Plugins/RS485` ("RS485 devices"). Talks to equipment on an RS485 / Modbus bus: servos (the T3D servo here), spindle drives (VFD), meters. It finds adapters and devices by itself, shows torque, current and alarm codes live, keeps a history, reads and writes registers by hand, imports and exports device profiles and has a step-by-step diagnostic. It has its own backend (`main.py`, pyserial) and depends on the System service.
@@ -8,7 +14,7 @@ Version documented: 2.6.x on DWC 3.6.3.
 
 ## 1. Requirements
 
-1. WorkshopService running. 2. `pyserial >= 3.5` (installed by DSF from the plugin manifest into the plugin's own venv). 3. An RS485 adapter: USB (FTDI etc., shows as `/dev/ttyUSB0`) or the RS485 port of the Duet. 4. The plugin's service user in the group `dialout` (step 2 of the checklist verifies it). 5. Only one master per bus: do not connect another program to the same adapter.
+1. WorkshopService running. 2. `pyserial==3.5`: DSF downloads it from PyPI (pypi.org) into the plugin's own venv when you install the plugin, so the Pi needs Internet for that step only; nothing is downloaded while the plugin runs (to install offline, stage the wheel in a local pip cache first). 3. An RS485 adapter: USB (FTDI etc., shows as `/dev/ttyUSB0`) or the RS485 port of the Duet. 4. The plugin's service user in the group `dialout` (step 2 of the checklist verifies it). 5. Only one master per bus: do not connect another program to the same adapter.
 
 ## 2. Install
 
@@ -199,14 +205,14 @@ Risk: **High (own Python process; writes to an industrial bus; can send M25 / M1
 
 **DSF permissions** (DSF shows them and you approve them when you install; the zip asks for nothing else):
 
-| Permission | What it lets the plugin do |
-|---|---|
-| `commandExecution` | send G-code to the board |
-| `codeInterceptionReadWrite` | intercept G-code (M3/M4/M5, a device fault) and let it through or change it |
-| `objectModelReadWrite` | read the state of the machine and publish its own data in it |
-| `fileSystemAccess` | read and write files outside the DSF folders (keys, camera files) |
-| `registerHttpEndpoints` | answer on its own address (an API endpoint under /machine/<Id>/) |
-| `networkAccess` | open network connections (notices, the meter, the camera, the service API) |
+| Permission | What it lets the plugin do | Where the code uses it |
+|---|---|---|
+| `commandExecution` | send G-code to the board | `dsf/main.py` (`CommandConnection.perform_simple_code`): `M25` / `M112` on a device fault and the codes of its own actions |
+| `codeInterceptionReadWrite` | intercept G-code (M3/M4/M5, a device fault) and let it through or change it | `dsf/main.py` (`InterceptConnection`, Pre mode, with a filter list): reacts to the codes of a device with an axis |
+| `objectModelReadWrite` | read the state of the machine and publish its own data in it | `dsf/main.py`: `set_plugin_data` of its device state |
+| `fileSystemAccess` | read and write files outside the DSF folders (keys, camera files) | reads and writes `0:/sys/workshop/config/rs485.json` and `data/rs485-history.json`, `rs485-seen.json`, `rs485-backups/` (`dsf/main.py`); opens the serial adapter `/dev/ttyUSB*` / `/dev/ttyACM*` and reads its sysfs data (`dsf/bus.py`, `dsf/diagnosis.py`); writes its log `rs485.log` in the plugin folder. Not measured with the permission probe: unverified whether a narrower permission would cover them |
+| `registerHttpEndpoints` | answer on its own address (an API endpoint under /machine/<Id>/) | `dsf/workshop_api.py`: `/machine/WorkshopRS485/api`, served by DWC's own web server |
+| `networkAccess` | open network connections (notices, the meter, the camera, the service API) | no listener of its own. Its only connection is to `http://127.0.0.1/machine/WorkshopService/api` for the role of the caller (`dsf/rs485_access.py`). Not measured: unverified whether DSF needs this permission for that loopback call or for its own IPC socket |
 
 **Depends on:** `WorkshopService` (install it first, uninstall it last).
 
@@ -217,7 +223,7 @@ Risk: **High (own Python process; writes to an industrial bus; can send M25 / M1
 
 **What it needs outside the zip** (each one is a separate step you do on purpose and can undo):
 - the `dsf` user must be in the `dialout` group to open the USB-RS485 adapter
-- Python package `pyserial` in its own venv
+- **Downloads from the Internet when you install it:** DSF fetches `pyserial` from PyPI (pypi.org) into the private venv `/opt/dsf/plugins/WorkshopRS485/venv`, with the exact version pinned in `plugin.json`. This happens only at install time; nothing is downloaded while the plugin runs. To install without Internet on the Pi, put the `pyserial` wheel in a local pip cache or index first
 
 **Safety notes:**
 - Its API applies the roles before any write to a bus. A device with no axis only warns: it never pauses a job.

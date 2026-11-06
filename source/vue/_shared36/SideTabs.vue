@@ -16,16 +16,22 @@
 				type="button"
 				role="tab"
 				class="st-item"
-				:class="{ 'st-on': value === key(it, i), 'st-off': it.disabled }"
+				:class="{ 'st-on': value === key(it, i), 'st-off': it.disabled, 'st-locked': !!it.locked, 'st-locked-session': !!it.locked && out }"
 				:data-group="it.group ? indexGroup(it.group) : null"
 				:aria-selected="value === key(it, i) ? 'true' : 'false'"
 				:tabindex="i === tabbable ? 0 : -1"
 				:disabled="it.disabled"
-				:title="it.hint ? it.label + ': ' + it.hint : it.label" :aria-label="it.hint ? it.label + ': ' + it.hint : it.label"
+				:title="lockHint(it)" :aria-label="lockHint(it)"
 				@click="choose(it, i)"
 			>
-				<v-icon :size="18" class="st-icon">{{ it.icon }}</v-icon>
-				<span class="st-label">{{ it.label }}</span>
+				<span class="st-iconbox">
+					<v-icon :size="18" class="st-icon">{{ it.icon || (out ? 'mdi-account-lock-outline' : 'mdi-lock-outline') }}</v-icon>
+					<v-icon v-if="it.locked && it.icon" :size="12" class="st-lockmark" aria-hidden="true">{{ out ? 'mdi-account-lock' : 'mdi-lock' }}</v-icon>
+				</span>
+				<span class="st-text">
+					<span class="st-label">{{ it.label }}</span>
+					<span v-if="it.locked" class="st-need">{{ out ? ts('sidebar_needs_session') : roleName(it.locked) }}</span>
+				</span>
 				<span v-if="it.badge" class="st-badge">{{ it.badge }}</span>
 			</button>
 		</template>
@@ -44,6 +50,9 @@
  * when the items have no id). The page keeps its v-tabs-items / v-if content: wrap bar + content in
  * .st-layout / .st-body. */
 import { ts } from './shared-t.js';
+import { roleLabel } from './notice-kind.js';
+import { signedOut } from './workshop-auth.js';
+import { roleMixin } from './role-mixin.js';
 
 const PIN_KEY = 'workshopSideTabsPinned:';
 
@@ -58,6 +67,7 @@ function pinStore(write) {
 
 export default {
 	name: 'SideTabs',
+	mixins: [roleMixin],
 	props: {
 		items: { type: Array, required: true },
 		value: { default: 0 },
@@ -75,6 +85,11 @@ export default {
 	},
 	computed: {
 		// roving tabindex: only the chosen tab (else the first enabled one) is in the Tab order; the arrow keys move between the tabs
+		// nobody is signed in: the locks say "sign in" (blue), not a role
+		out() {
+			void this.identityTick; // the session changes while the bar is on screen (sign in, sign out, a role change): without this the value was frozen at the first draw
+			return signedOut();
+		},
 		tabbable() {
 			const chosen = this.items.findIndex((it, i) => this.key(it, i) === this.value && !it.disabled);
 			return chosen >= 0 ? chosen : this.items.findIndex(it => !it.disabled);
@@ -82,6 +97,14 @@ export default {
 	},
 	methods: {
 		ts,
+		roleName(role) {
+			return roleLabel(role, ts);
+		},
+		// the tooltip of an item: its hint, or (locked) the same sentence of every notice
+		lockHint(it) {
+			if (it.locked) return it.label + ': ' + (this.out ? ts('notice_session_reason') : ts('notice_role_needed', { needed: this.roleName(it.locked) }));
+			return it.hint ? it.label + ': ' + it.hint : it.label;
+		},
 		move(ev) {
 			const keys = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1, Home: 'first', End: 'last' };
 			if (!(ev.key in keys)) return;
@@ -169,10 +192,15 @@ export default {
 .sidetabs .st-item { display: flex; align-items: center; gap: 10px; min-height: 40px; width: 100%; padding: 6px 12px; border: none; border-left: 2px solid transparent; font: inherit; text-align: left; cursor: pointer; }
 .sidetabs .st-item.st-off { cursor: not-allowed; }
 .sidetabs .st-icon { flex: none; }
-.sidetabs .st-label { flex: 1 1 auto; min-width: 0; line-height: 1.25; }
+/* the icon of the section (always the real one; a locked section gets a small lock on its corner) and the text column: the name, and below it who may open it */
+.sidetabs .st-iconbox { position: relative; flex: none; display: inline-flex; }
+.sidetabs .st-lockmark { position: absolute; right: -6px; bottom: -5px; }
+.sidetabs .st-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.sidetabs .st-label { min-width: 0; line-height: 1.25; overflow-wrap: anywhere; }
+.sidetabs .st-need { flex: none; }
 .sidetabs .st-badge { flex: none; padding: 0 6px; }
 /* folded: only the icons */
-.sidetabs.st-collapsed .st-label, .sidetabs.st-collapsed .st-badge { display: none; }
+.sidetabs.st-collapsed .st-text, .sidetabs.st-collapsed .st-badge { display: none; }
 .sidetabs.st-collapsed .st-item { justify-content: center; padding: 6px 0; }
 /* the name of the group stays readable when folded (short, small): "Operate" / "Configure" */
 .sidetabs.st-collapsed .st-group { line-height: 1.1; padding: 8px 2px 2px; margin: 4px 0 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -185,6 +213,6 @@ export default {
 	/* in the row layout the group name goes before its tabs, so "Configure" is still there */
 	.sidetabs.sidetabs .st-group, .sidetabs.st-collapsed .st-group { display: inline-flex; align-items: center; flex: none; padding: 0 8px 0 6px; margin: 0; border-top: 0; text-align: left; overflow: visible; }
 	.sidetabs .st-item, .sidetabs.st-collapsed .st-item { width: auto; flex: none; border-left: none; border-bottom: 2px solid transparent; justify-content: flex-start; padding: 6px 12px; }
-	.sidetabs.st-collapsed .st-label { display: block; }
+	.sidetabs.st-collapsed .st-text { display: flex; }
 }
 </style>

@@ -447,12 +447,12 @@ class BusDuet(Bus):
       M261.1 P<n> A<addr> F<3|4> R<reg> B<count> V"<var>"   reads (null = error)
       M260.1 P<n> A<addr> R<reg> B<value>   writes holding registers
 
-    The read goes through the macro 0:/sys/workshop/macros/rs485-read.g (M261.1 stores into
+    The read goes through the macro 0:/sys/workshop/macros/system/rs485-read.g (M261.1 stores into
     a local variable; the macro copies it to global.rs485Reading and from here
     that global is read). The same single-master queue as the USB bus.
     """
 
-    MACRO = "0:/sys/workshop/macros/rs485-read.g"
+    MACRO = "0:/sys/workshop/macros/system/rs485-read.g"
 
     def __init__(self, cfg, log, output):
         self.output = output

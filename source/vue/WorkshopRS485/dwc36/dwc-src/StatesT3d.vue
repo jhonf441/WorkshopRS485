@@ -2,7 +2,7 @@
 	<div class="et3">
 		<div class="et3-bar">
 			<div class="et3-summary">
-				<lock-reason v-if="error && errorCause" :kind="errorCause" need="technician" :action="errorAction" />
+				<lock-reason v-if="error && errorCause" :kind="errorCause" need="operator" :action="errorAction" />
 				<template v-else-if="error">
 					<v-icon small color="warning" class="mr-1">mdi-alert</v-icon>
 					<span class="warning--text">{{ errorText }}</span>

@@ -30,7 +30,8 @@
 				</v-card-title>
 				<v-divider />
 				<v-card-text class="pt-4 startup-body">
-				<lock-reason v-if="locked" kind="session" class="mb-3" />
+				<lock-reason v-if="signedOutNow" kind="session" class="mb-3" />
+				<lock-reason v-else-if="locked" op="examples.create" need="technician" class="mb-3" />
 
 		<!-- the assistant: one pending row at a time -->
 		<div v-if="wizard" class="startup-wizard">
@@ -236,10 +237,15 @@ export default {
 		return { list: null, hidden: [], open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false, refusal: '' };
 	},
 	computed: {
-		// signed out the card can be read but nothing here creates or changes a file: each button is off and the sentence says why
-		locked() {
+		signedOutNow() {
 			void this.identityTick
 			return signedOut()
+		},
+		// signed out, or a role below the one of examples.list / examples.create (technician): the card can be read but nothing here creates or
+		// changes a file; each button is off and ONE reason says why (session, or the role needed), instead of a 403 after the click
+		locked() {
+			void this.identityTick
+			return signedOut() || !this.canDo('examples.create') || !this.canDo('examples.list')
 		},
 		// full sentence of the chip (tooltip)
 		chipHelp() {
@@ -253,7 +259,8 @@ export default {
 			const service = this.serviceRow
 				? [{
 					id: 'service',
-					state: this.list === null ? (this.locked ? 'session' : 'missing') : 'configured',
+					// a role too low to check it is grey ('na') and does not count as pending: only a technician can fix it
+					state: this.list === null ? (this.locked ? 'session' : this.refusal === 'role' ? 'na' : 'missing') : 'configured',
 					label: 'service',
 					help: 'service_tip',
 					what: 'service_what',
@@ -261,7 +268,7 @@ export default {
 					ifMissing: 'service_missing',
 					// signed out the service cannot be asked, so it is not said to be off: the row says the session is what is missing
 					// a refusal of the role is not a service that is off either (it used to say "not running" to an operator)
-					texts: { session: 'service_session', missing: this.refusal === 'role' ? 'service_role' : 'service_not_running' }
+					texts: { session: 'service_session', missing: 'service_not_running', na: 'service_role' }
 				}]
 				: [];
 			return service.concat(this.defs);

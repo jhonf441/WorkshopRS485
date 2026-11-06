@@ -107,7 +107,8 @@ export default {
 		step() {
 			if (this.act !== null) return this.act
 			if (this.variant !== 'cover') return ''
-			return this.k === 'session' ? 'sign-in' : this.k === 'down' ? 'retry' : ''
+			// a session cover has no button of its own: the chip of the bar is the one sign-in button of the page
+			return this.k === 'down' ? 'retry' : ''
 		},
 		actLabel() {
 			return this.step === 'retry' ? ts('notice_retry') : ts('notice_sign_in')

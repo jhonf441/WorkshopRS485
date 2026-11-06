@@ -96,7 +96,7 @@
 						<div><span class="et">{{ $t('plugins.WorkshopRS485.device.how_it_clears') }}</span><span>{{ alarmInfo.procedure || alarmInfo.deleted_text }}</span></div>
 					</div>
 					<div class="d-flex flex-wrap align-center mt-2" style="gap:8px">
-						<v-btn v-if="canClear && (!alarmInfo || alarmInfo.deleted === 'si') && can('rs485.action', { action: 'clear_alarm' })" small outlined :color="armed === 'alarm' ? 'error' : ''" :loading="busy === 'alarm'" @click="arm('alarm', deleteAlarm)">
+						<v-btn v-if="canClear && (!alarmInfo || alarmInfo.deleted === 'si')" small outlined :disabled="!can('rs485.action', { action: 'clear_alarm' })" :color="armed === 'alarm' ? 'error' : ''" :loading="busy === 'alarm'" @click="arm('alarm', deleteAlarm)">
 							<v-icon small left>mdi-alarm-off</v-icon>{{ armed === 'alarm' ? $t('plugins.WorkshopRS485.device.tap_again_to_clear_the_alarm') : $t('plugins.WorkshopRS485.device.clear_alarm') }}
 						</v-btn>
 						<v-btn small text @click="open(3)"><v-icon small left>mdi-format-list-numbered</v-icon>{{ $t('plugins.WorkshopRS485.device.see_all_codes') }}</v-btn>

@@ -543,7 +543,7 @@
 		"lights_lights_states_stopped_settings_plugins_lights": "Lights and states is stopped (Settings > Plugins > Lights and states): the service does not control the lights",
 		"lights_no_frames": "no frames",
 		"lights_pin_of_strip_to_test_missing": "The pin of the strip to test is missing",
-		"lights_saved_but_could_not_write_lights_g": "Saved in config.json, but sys/workshop/macros/lights.g could not be written: {e}",
+		"lights_saved_but_could_not_write_lights_g": "Saved in config.json, but sys/workshop/macros/system/lights.g could not be written: {e}",
 		"lights_scene_default_name": "Scene",
 		"lights_scene_dim": "Dim",
 		"lights_scene_job": "Work",

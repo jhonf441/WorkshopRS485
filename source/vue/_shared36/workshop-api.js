@@ -21,6 +21,7 @@ import i18n from '../../i18n'
 import { ts } from './shared-t.js'
 import { idInstalled, pluginOf } from './workshop-ids.js'
 import { serviceText } from './service-text.js'
+import { attentionSession, isReadOp } from './session-attention.js'
 import { adoptToken, askLoginNow, authHeaders, currentIdentity, ensureLogin, logoutWith, loginWith, onIdentity, recentGesture, refreshIdentity, signedOut, startKeepalive, workshopCan, workshopRole } from './workshop-auth.js'
 
 export { currentIdentity, onIdentity, workshopCan, workshopRole }
@@ -191,7 +192,12 @@ export async function api(op, args, opts = {}) {
 	const byPerson = recentGesture() // started by a touch: if it is refused, the person is told (toast of the control bar)
 	const fail = err => {
 		const toast = window.__workshop && window.__workshop.toast
-		if (byPerson && !opts.quiet && typeof toast === 'function') toast(err.message)
+		// no session: the chip blinks (no card, no dialog); any other refusal is told by the card of the control bar
+		// a role that is too low: the role notes blink; a read made by the page itself says nothing; a card only for an action with no note on screen
+		if (byPerson && !opts.quiet && err.code === 'login_required') attentionSession()
+		else if (byPerson && !opts.quiet && err.code === 'forbidden') {
+			if (!attentionSession('role') && !isReadOp(op) && typeof toast === 'function') toast(err.message)
+		} else if (byPerson && !opts.quiet && typeof toast === 'function') toast(err.message)
 		return err
 	}
 	for (let round = 0; round < 3; round++) {
