@@ -1,5 +1,5 @@
 <template>
-	<!-- The sections this role does not see (AWS-console rule: nothing disappears without a word). ONE note of the cause "role", the same box as every
+	<!-- The sections this role does not see (locked-in-place rule: nothing disappears without a word). ONE note of the cause "role", the same box as every
 	     other role notice (N2): it says WHICH role the person has, how many sections it hides and which role opens them. Signed out the chip of the bar
 	     says it, so nothing is drawn here. Give it ALL the sections of the page ({ min }). -->
 	<session-notice v-if="hidden" class="hidden-note" variant="section" kind="role" :text="text" />

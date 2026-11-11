@@ -34,7 +34,7 @@ export function visibleItems(items, can) {
 	return (items || []).filter(i => !i.min || roleAtLeast(i.min, can))
 }
 
-// ALL the items, the ones above the person's role marked `locked: <the role that opens it>` (AWS rule: what you cannot use stays in its place, locked,
+// ALL the items, the ones above the person's role marked `locked: <the role that opens it>` (locked-in-place rule: what you cannot use stays in its place, locked,
 // with the reason; nothing disappears in silence). A page draws them with the lock in the side bar and a cover when one is opened.
 export function lockedItems(items, can) {
 	return (items || []).map(i => (i.min && !roleAtLeast(i.min, can) ? Object.assign({}, i, { locked: i.min }) : i))

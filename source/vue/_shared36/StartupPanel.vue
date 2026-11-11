@@ -10,12 +10,14 @@
 	<span v-if="visible" class="startup-panel">
 		<!-- the entry is a chip for the page header (2026-10-18): rocket + name, green when ready, orange with the number of pending
 		     items; the tooltip says it in full. It opens the dialog. -->
-		<!-- 2026-10-23: only while something is pending it is a chip; when everything is ready it is a quiet icon (same dialog) -->
-		<v-chip v-if="!summary.ready" small outlined color="warning" class="startup-chip" :title="chipHelp" @click="openDialog">
+		<!-- 2026-10-23: only while something is pending it is a chip; when everything is ready it is a quiet icon (same dialog).
+		     Nothing to do but rows nobody could check (no session): a quiet icon in the session blue, no words: the bar already carries the one
+		     "Sign in" chip, and "1 step pending" next to it was not a step at all. -->
+		<v-chip v-if="summary.pending" small outlined color="warning" class="startup-chip" :title="chipHelp" @click="openDialog">
 			<v-icon small left>mdi-rocket-launch-outline</v-icon>{{ tt('chip_pending', { n: summary.pending }) }}
 		</v-chip>
 		<v-btn v-else icon small class="startup-chip" :title="chipHelp" @click="openDialog">
-			<v-icon small color="success">mdi-rocket-launch-outline</v-icon>
+			<v-icon small :color="summary.ready ? 'success' : 'info'">mdi-rocket-launch-outline</v-icon>
 		</v-btn>
 
 		<v-dialog v-model="dialog" max-width="600" scrollable :fullscreen="$vuetify.breakpoint.xsOnly">
@@ -30,7 +32,8 @@
 				</v-card-title>
 				<v-divider />
 				<v-card-text class="pt-4 startup-body">
-				<lock-reason v-if="signedOutNow" kind="session" class="mb-3" />
+				<!-- the dialog has no page bar with the sign-in chip: signed out, ONE notice carries the sentence and the sign-in button -->
+				<session-notice v-if="signedOutNow" kind="session" act="sign-in" class="mb-3" @retry="refresh(false)" />
 				<lock-reason v-else-if="locked" op="examples.create" need="technician" class="mb-3" />
 
 		<!-- the assistant: one pending row at a time -->
@@ -134,13 +137,15 @@
 		</div>
 
 		<div v-else>
-			<!-- progress -->
+			<!-- progress; none while rows could not be checked (no session): "0 of 1 ready" said something was missing on the machine when only the session was -->
+			<template v-if="!summary.session">
 			<div class="d-flex align-baseline mb-1">
 				<span class="text-subtitle-1 font-weight-medium flex-grow-1">{{ summary.ready ? tt('modal_all_ready') : tt('modal_progress', { a: summary.total - summary.pending, b: summary.total }) }}</span>
 				<span class="text-caption" :class="summary.ready ? 'success--text' : 'warning--text'">{{ summary.ready ? tt('summary_ready') : tt('summary_pending', { n: summary.pending }) }}</span>
 			</div>
 			<v-progress-linear :value="percentage" :color="summary.ready ? 'success' : 'primary'" rounded height="8" class="mb-2" />
 			<div class="text-caption startup-sub mb-3">{{ summary.ready ? tt('modal_ready_hint') : tt('modal_hint') }}</div>
+			</template>
 			<div v-if="missingList.length" class="startup-missing mb-3">
 				<div class="text-subtitle-2 mb-1">{{ tt('missing_title') }}</div>
 				<ul class="text-body-2 startup-missing-list">
@@ -205,7 +210,9 @@ import i18n from '../../i18n'
 import { api } from './workshop-api.js'
 import { signedOut } from './workshop-auth.js'
 import { roleMixin } from './role-mixin.js'
+import { ts as sharedText } from './shared-t.js' // the shared sentences (the local ts() method maps the startup keys)
 import LockReason from './LockReason.vue'
+import SessionNotice from './SessionNotice.vue'
 import WfField from './WfField.vue'
 import HelpTip from './HelpTip.vue'
 import { startupRows, startupSummary } from './startup.js'
@@ -223,7 +230,7 @@ import {
 //   filaServicio   false = no "System service" row (default: it is shown)
 //   crearAlInicio  true = asks the service for the examples that were never made (once, when the page opens)
 export default {
-	components: { LockReason, WfField, HelpTip },
+	components: { LockReason, SessionNotice, WfField, HelpTip },
 	mixins: [roleMixin],
 	props: {
 		plugin: { type: String, required: true },
@@ -250,7 +257,9 @@ export default {
 		// full sentence of the chip (tooltip)
 		chipHelp() {
 			const r = this.summary;
-			return this.tt('title') + ' - ' + (r.ready ? this.tt('strip_ready') : this.tt('strip_pending', { n: r.pending })) + ' - ' + (r.ready ? this.tt('strip_open') : this.tt('strip_setup'));
+			// nothing pending but rows nobody could check: the sentence of every session notice (no startup key of its own)
+			const what = r.ready ? this.tt('strip_ready') : r.pending ? this.tt('strip_pending', { n: r.pending }) : sharedText('notice_session_reason');
+			return this.tt('title') + ' - ' + what + ' - ' + (r.pending ? this.tt('strip_setup') : this.tt('strip_open'));
 		},
 		key() {
 			return 'workshop' + this.plugin + 'StartupHidden';

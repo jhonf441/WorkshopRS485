@@ -17,7 +17,16 @@ export const MODES = ['fff', 'laser', 'cnc'];
 export const MODE_NAMES = { fff: 'FFF', laser: 'Laser', cnc: 'CNC' };
 export const MODE_CODES = { fff: 'M451', laser: 'M452', cnc: 'M453' };
 export const MODE_MACROS = { fff: 'macros/mode/selectfff.g', laser: 'macros/mode/selectlaser.g', cnc: 'macros/mode/selectcnc.g' };
-export const MODE_FILES = { fff: 'sys/modefff.g', laser: 'sys/modelaser.g', cnc: 'sys/modecnc.g' };
+// WHERE THE MODE SYSTEM LIVES ON THE SD (SD layout phase 4). The ONE place in the plugins that spells these paths: everything else imports them
+// (tests/test_mode_paths.py fails on a literal). The service has the same strings in dsf/mode_paths.py.
+export const MODES_DIR = 'sys/workshop/modes';
+export const MODE_FILES = { fff: MODES_DIR + '/modefff.g', laser: MODES_DIR + '/modelaser.g', cnc: MODES_DIR + '/modecnc.g' };
+export const AUTO_MODE_FILE = MODES_DIR + '/automodeselect.g';
+export const MODE_STATE_FILE = 'sys/workshop/data/modestate.g';
+// path of a file of the SD in the form G-code and the file API use
+export const sdPath = rel => '0:/' + rel;
+// a mode file by its name, to read one that is not the one being edited: 'modelaser.g' -> '0:/sys/workshop/modes/modelaser.g'
+export const modeFilePath = name => sdPath(MODES_DIR + '/' + name);
 
 // answer: { fff, laser, cnc } with true / false / null (null = not answered)
 function emptyAnswer() {
@@ -114,7 +123,7 @@ export function withMode(state, mode, on, detected) {
 // Assistant of a mode macro: asks how THIS machine gets into the mode (RepRapFirmware's own mode, a tool of config.g, or a
 // macro of its own) and writes the macro. Nothing assumes the owner's tool numbers or macro names.
 // The default (RRF's mode) also sets global.selectedMode, which the system service and the pages read first (they fall
-// back to RRF's own state.machineMode), and runs the person's sys/mode<name>.g only if that file exists.
+// back to RRF's own state.machineMode), and runs the person's sys/workshop/modes/mode<name>.g only if that file exists.
 function questionsMode() {
 	return [
 		{ id: 'method', kind: 'list', defaultValue: 'rrf', label: 'q_method', help: 'q_method_tip', options: [{ value: 'rrf', label: 'opt_rrf' }, { value: 'tool', label: 'opt_tool' }, { value: 'macro', label: 'opt_macro' }] },
@@ -137,8 +146,8 @@ export function wizardMode(name, mode, code, file) {
 				l.push('    set global.selectedMode = "' + mode + '"');
 				l.push(code);
 				l.push('; Your own settings for this mode (heaters, tools, spindle...): run only if the file exists.');
-				l.push('if fileexists("0:/sys/' + file + '")');
-				l.push('    M98 P"0:/sys/' + file + '"');
+				l.push('if fileexists("' + modeFilePath(file) + '")');
+				l.push('    M98 P"' + modeFilePath(file) + '"');
 			} else if (r.method === 'tool') {
 				l.push('; The tool has to be set up first (M563 P' + r.tool + ' ... in your config.g).');
 				l.push('T' + r.tool);
@@ -215,7 +224,38 @@ export function modeRows(enabled) {
 // config.g has to call automodeselect.g for the machine to enter its mode at start-up. The page reads sys/config.g and says whether it
 // does (it never edits config.g: that file holds the hardware). calls: true | false | null (not read).
 // It cannot be automated, so the row carries the manual instructions: steps (keys) + a copyable line; "Check" reads config.g again.
-export const BOOT_LINE = 'M98 P"0:/sys/automodeselect.g"';
+export const BOOT_LINE = 'M98 P"' + sdPath(AUTO_MODE_FILE) + '"';
+// The mode files at the layout BEFORE phase 4 (built without spelling the paths: tests/test_mode_paths.py forbids the literal). The page never
+// reads them as modes (no fallback to the old paths); it only asks whether they are still there to say "modes not migrated".
+export const OLD_MODE_FILES = ['automodeselect', 'modefff', 'modelaser', 'modecnc', 'modestate'].map(n => 'sys/' + n + '.g');
+const NEW_OF_OLD = {
+	automodeselect: AUTO_MODE_FILE, modefff: MODE_FILES.fff, modelaser: MODE_FILES.laser, modecnc: MODE_FILES.cnc, modestate: MODE_STATE_FILE
+};
+// The old-layout mode files that are still there while their new path is not: `read(path)` -> text | null (404), may throw (then that file
+// says nothing). Only to SAY "modes not migrated" (the start-up wizard moves them); the page never uses the old files.
+export async function findUnmigrated(read) {
+	const has = async f => {
+		try {
+			return (await read('0:/' + f)) !== null;
+		} catch (e) {
+			return false;
+		}
+	};
+	const out = [];
+	for (const name of Object.keys(NEW_OF_OLD)) {
+		const old = 'sys/' + name + '.g';
+		if ((await has(old)) && !(await has(NEW_OF_OLD[name]))) out.push(old);
+	}
+	return out;
+}
+// The row that says the modes were not migrated yet: `old` = the old paths found (array, may be empty). null when there is nothing to say.
+export function rowUnmigrated(old) {
+	if (!old || !old.length) return null;
+	return {
+		id: 'modes_unmigrated', state: 'missing', label: 'row_unmigrated', what: 'row_unmigrated_what', why: 'row_unmigrated_for', ifMissing: 'row_unmigrated_missing',
+		help: 'row_unmigrated_tip', missingText: 'miss_unmigrated', texts: { configured: 'unmigrated_ok', missing: 'unmigrated_missing' }, params: { files: old.join(', ') }
+	};
+}
 export function rowBoot(calls) {
 	if (calls === null || calls === undefined) return null;
 	return {
@@ -224,9 +264,20 @@ export function rowBoot(calls) {
 		manual: { steps: ['boot_step1', 'boot_step2', 'boot_step3'], copy: BOOT_LINE, copyLabel: 'boot_copy' }
 	};
 }
-export function callsAutoModeSelect(text) {
-	return /^[ \t]*M98[ \t]+P"0:\/sys\/automodeselect\.g"/im.test(String(text || ''));
+// true when config.g starts the mode system: the line itself, or the marked block of the workshop (hook `boot`, SD layout phase 5), which calls
+// sys/workshop/hooks/boot.g and that one runs automodeselect.g. The MARK alone is not enough: `bootText` (the text of boot.g, null = missing)
+// must exist and call automodeselect.g on an active line, or nothing runs the modes at start-up.
+export function callsAutoModeSelect(text, bootText) {
+	const lines = String(text || '').split(/\r?\n/);
+	const norm = x => x.replace(/^[ \t]+/, '').replace(/[ \t]+/g, ' ').toLowerCase();
+	const direct = norm('M98 P"' + sdPath(AUTO_MODE_FILE) + '"');
+	if (lines.some(l => norm(l).indexOf(direct) === 0)) return true;
+	if (!lines.some(l => /^[ \t]*;[ \t]*>>>[ \t]*WORKSHOP[ \t]+hook=boot[ \t]/.test(l))) return false;
+	if (bootText === null || bootText === undefined) return false;
+	return String(bootText).split(/\r?\n/).some(l => l.replace(/;.*$/, '').indexOf('automodeselect.g') >= 0);
 }
+// where the block of config.g sends: the macro callsAutoModeSelect needs to read
+export const BOOT_HOOK_FILE = 'sys/workshop/hooks/boot.g';
 
 // The question that opens the card. `state` = modesState(...), `detected` = detectModes(...), `onAnswer(values)` saves it.
 // Pending (red) until answered; the three yes/no questions start with the board's suggestion.
@@ -244,9 +295,12 @@ export function rowQuestion(state, detected, onAnswer) {
 
 // All the mode rows of a card, in order: the question first; then (only if two or more modes are on) the check of config.g and the mode rows.
 // bootCalls: callsAutoModeSelect(config.g) or null. -> array of defs
-export function modeStartupRows(state, detected, bootCalls, onAnswer) {
+export function modeStartupRows(state, detected, bootCalls, onAnswer, unmigrated) {
 	const out = [rowQuestion(state, detected, onAnswer)];
 	if (!usesSeveralModes(state)) return out;
+	// the mode files are still at the old place: say so, and do not offer rows (and lines to copy) for files that are not where they are read
+	const un = rowUnmigrated(unmigrated);
+	if (un) return out.concat([un]);
 	const boot = rowBoot(bootCalls);
 	if (boot) out.push(boot);
 	return out.concat(modeRows(enabledList(state)));
@@ -287,8 +341,10 @@ export function effectiveModes(state, detected) {
 
 // The rows of the start-up guide of the modes (header chip of the Machine page and the cards of its "Modes" section): only with two
 // or more modes on, and only the rows whose file could be read. bootCalls = what rowBoot reads; texts = { path: text|null }.
-export function guideDefs(state, bootCalls, texts) {
+export function guideDefs(state, bootCalls, texts, unmigrated) {
 	if (!usesSeveralModes(state)) return [];
+	const un = rowUnmigrated(unmigrated);
+	if (un) return [un];
 	const boot = rowBoot(bootCalls);
 	const rows = withFileStates(modeRows(enabledList(state)), texts).filter(d => d.state !== undefined);
 	return (boot ? [boot] : []).concat(rows);

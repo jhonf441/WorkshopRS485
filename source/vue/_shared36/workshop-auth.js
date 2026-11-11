@@ -13,7 +13,7 @@
 // tells the audit which browser did it). All the plugins of a page share ONE state through window.__workshopAuth.
 
 import { pinDialog } from './pin-dialog.js'
-import { sessionStateOf, isSignedOutState, accessStateOf } from './session-state.js'
+import { sessionStateOf, isSignedOutState, accessStateOf, sessionActionOf } from './session-state.js'
 
 const TOKEN_KEY = 'workshop-token'
 const DEVICE_KEY = 'workshop-device'
@@ -216,9 +216,20 @@ export async function refreshIdentity(call) {
 	return j && j.ok ? j.result : null
 }
 
+// A sign-in on a browser that still holds an accepted session is a CHANGE of person ("Change role", 2026-11-09): the session that was there is kept
+// until the service accepts the new name and PIN; only then is it closed (with its own token, still in the headers) and the new one adopted. A
+// refused or cancelled attempt leaves the current session as it was.
 export async function loginWith(call, name, pin) {
+	const before = getToken()
 	const j = await call('auth.login', { name, pin })
 	if (!j.ok) return j
+	if (before && before !== j.result.token) {
+		try {
+			await call('auth.logout', {})
+		} catch (e) {
+			/* the previous session ends by itself when it expires */
+		}
+	}
 	setToken(j.result.token)
 	await refreshIdentity(call)
 	return j
@@ -263,12 +274,20 @@ export function accessReason(op, ctx) {
 	return a === 'session' ? 'signed_out' : a === 'role' ? 'role' : ''
 }
 
+// The word of the button next to a lock: 'sign-in' (nobody is signed in), 'change-role' (someone is, with a role that is too low: another
+// person signs in, the current session stays until that succeeds) or '' (nothing blocks). Both words open the ONE dialog: askLogin() of workshop-api.js.
+export function sessionAction(op, ctx) {
+	return sessionActionOf(accessState(op, ctx))
+}
+
 // The person touched the page a moment ago: what fails now is probably their action (so it is worth telling them).
 export function recentGesture() {
 	return Date.now() - (shared().gestureAt || 0) < GESTURE_MS
 }
 
-// Asks the person for name and PIN (one dialog for all the callers). Resolves true when logged in, false when cancelled.
+// Asks the person for name and PIN (one dialog for all the callers: "Sign in" and "Change role" are the same dialog). Resolves true when logged in,
+// false when cancelled. The session this browser has (if any) is NOT touched here: it is kept until loginWith() adopts the new one, so a cancelled
+// or refused "Change role" leaves the person signed in as before.
 export function ensureLogin(call, t) {
 	const s = shared()
 	if (s.flight) return s.flight
@@ -278,7 +297,6 @@ export function ensureLogin(call, t) {
 	if (shared().forceAsk) s.quietUntil = 0
 	// after cancelling, not even a touch brings it back: the refusal message and the "sign in" button tell what to do
 	if (Date.now() < s.quietUntil) return Promise.resolve(false)
-	setToken('')
 	s.flight = pinDialog(async (name, pin) => {
 		const j = await loginWith(call, name, pin)
 		if (j.ok) {
@@ -303,7 +321,8 @@ export function ensureLogin(call, t) {
 	return s.flight
 }
 
-// The person pressed "log in" (not a call that failed): the dialog opens even if it was cancelled a moment ago.
+// The person pressed "Sign in" or "Change role" (not a call that failed): the dialog opens even if it was cancelled a moment ago. The ONE entry point
+// of every button that asks for a name and a PIN (askLogin() of workshop-api.js wraps it with the real call).
 export function askLoginNow(call, t) {
 	shared().forceAsk = true
 	try {

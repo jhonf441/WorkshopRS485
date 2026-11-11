@@ -8,6 +8,7 @@
 //   noticeText(kind, { needed, role, state, action }, t)  the one sentence of that cause; needed / role are role ids ('operator', ...); action = what was
 //                                                  refused, already translated ("Saving the zones"): the 403 sentence then names it (notice_role_action)
 //   roleLabel(role, t)                             "Operador", "Técnico"... (the lockrole_* texts)
+//   noticeActionOf(kind, variant, act)             the button of a notice: 'sign-in' | 'change-role' | 'retry' | '' (act = what the page asked, null = the default)
 //   NOTICE_ICONS                                   the mdi icon of each cause
 //   NOTICE_COLORS                                  the semantic color token of each cause (family.css --wf-c-<color>, SESSION-TOKENS.md)
 
@@ -23,6 +24,16 @@ export const NOTICE_ICONS = {
 // ONE color per meaning (the --wf-c-* tokens of family.css): a person who must sign in is blue, one without permission is gray, a wait or a service
 // that is down is orange, only a real failure is red. 'resolving' is calm gray: nothing is red while the session is still being asked.
 export const NOTICE_COLORS = { session: 'info', role: 'neutral', down: 'warning', error: 'error', empty: 'neutral', resolving: 'neutral' }
+
+// The button of a notice. The default of the standard (7c): a cover offers "Sign in" only through the chip of the bar (none here) and "Retry" when
+// the service is down; a section note has none. A page whose surface has no bar chip asks for act 'sign-in': on a role cause it is drawn as
+// "Change role" (owner rule 2026-11-06: floating panels and locked launchers carry the way out), the same dialog that keeps the current session.
+export function noticeActionOf(kind, variant, act) {
+	const given = act === null || act === undefined ? (variant === 'cover' && kind === 'down' ? 'retry' : '') : act
+	if (given === 'sign-in' && kind === 'role') return 'change-role'
+	if (given === 'change-role' && kind === 'session') return 'sign-in'
+	return given
+}
 
 export function noticeKindOf({ reason, serviceDown, error } = {}) {
 	if (reason === 'signed_out') return 'session'

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "plugin": "WorkshopRS485",
+  "namespace": "rs485",
+  "prefixes": [],
+  "ui": "ui:rs485:open",
+  "operations": [
+    "api.describe",
+    "api.ping",
+    "auth.resolve"
+  ],
+  "shared": [
+    "api.describe",
+    "api.ping",
+    "auth.resolve"
+  ],
+  "restricted": [
+    "auth.resolve"
+  ],
+  "targets": [],
+  "profiles": {
+    "readonly": {
+      "title": "RS485ReadOnly",
+      "capabilities": [
+        "config.api"
+      ]
+    },
+    "operator": {
+      "title": "RS485Operator",
+      "capabilities": [
+        "config.api"
+      ]
+    },
+    "admin": {
+      "title": "RS485Admin",
+      "capabilities": [
+        "config.api"
+      ]
+    }
+  },
+  "satellite": "rs485_access.py"
+}

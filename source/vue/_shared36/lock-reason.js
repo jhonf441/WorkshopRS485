@@ -1,6 +1,6 @@
 'use strict'
 
-// Why something does not move, in one sentence next to it (the AWS-console rule of the owner, 2026-11-04): the reason is told apart
+// Why something does not move, in one sentence next to it (the locked-in-place rule of the owner, 2026-11-04): the reason is told apart
 // by its cause, because the person fixes each one differently (ESTANDAR 2, notice-kind.js).
 //
 //   lockReason('technician')   '' when the person may; "Requiere iniciar sesión." when nobody is signed in;

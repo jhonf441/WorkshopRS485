@@ -9,7 +9,7 @@
 
 import { workshopProfile } from './machine-profile.js'
 import { api } from './workshop-api.js'
-import { detectModes, modesFromProfile, modesState, profileChanges, callsAutoModeSelect, MODES } from './machine-modes.js'
+import { detectModes, modesFromProfile, modesState, profileChanges, callsAutoModeSelect, BOOT_HOOK_FILE, findUnmigrated, MODES } from './machine-modes.js'
 
 const LOCAL_KEY = 'workshopMachineModes'
 
@@ -64,7 +64,7 @@ export async function readMachineFile(path) {
 }
 
 // The files the mode rows are about and whether config.g calls the saved mode. defs = the mode rows ({file}); a file that
-// could not be read is left out (its row then has no state: nothing is guessed). -> { texts: {'0:/path': text|null}, bootCalls }
+// could not be read is left out (its row then has no state: nothing is guessed). -> { texts: {'0:/path': text|null}, bootCalls, unmigrated: [old paths still there] }
 export async function readModeFacts(defs) {
 	const texts = {}
 	await Promise.all((defs || []).filter(d => d.file).map(async d => {
@@ -76,9 +76,18 @@ export async function readModeFacts(defs) {
 	}))
 	let bootCalls = null
 	try {
-		bootCalls = callsAutoModeSelect(await readMachineFile('0:/sys/config.g'))
+		const config = await readMachineFile('0:/sys/config.g')
+		let bootText = null
+		try {
+			bootText = await readMachineFile('0:/' + BOOT_HOOK_FILE)
+		} catch (e) {
+			/* not read: the block then does not count */
+		}
+		bootCalls = callsAutoModeSelect(config, bootText)
 	} catch (e) {
 		/* no row for config.g */
 	}
-	return { texts, bootCalls }
+	// nothing at the new paths: are the mode files still at the old ones? Only to SAY it (the page never reads them as modes)
+	const unmigrated = Object.keys(texts).length ? await findUnmigrated(readMachineFile) : []
+	return { texts, bootCalls, unmigrated }
 }

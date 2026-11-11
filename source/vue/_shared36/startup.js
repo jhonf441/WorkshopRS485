@@ -34,9 +34,12 @@ export function startupRows(defs, files, hidden) {
 	});
 }
 
-// {total, pendientes, listo} over the rows that are shown and apply (hidden, grey and without-data rows do not count)
+// {total, pending, session, ready} over the rows that are shown and apply (hidden, grey and without-data rows do not count).
+// pending = what the person can set up (missing or only the example); session = rows nobody could check because nobody is signed in: they are
+// not "steps to do" (the header chip used to say "1 step pending" to a visitor), but nothing is ready while they are there.
 export function startupSummary(rows) {
 	const count = (rows || []).filter(f => !f.hidden && !f.withoutData && f.state !== 'na');
-	const pending = count.filter(f => f.state === 'example' || f.state === 'missing' || f.state === 'session').length;
-	return { total: count.length, pending: pending, ready: pending === 0 };
+	const pending = count.filter(f => f.state === 'example' || f.state === 'missing').length;
+	const session = count.filter(f => f.state === 'session').length;
+	return { total: count.length, pending: pending, session: session, ready: pending === 0 && session === 0 };
 }
