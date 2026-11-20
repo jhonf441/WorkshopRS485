@@ -1,4 +1,18 @@
 {
+	"subjects": {
+		"device": "Device",
+		"device_editor": "Device editor",
+		"diagnosis": "Diagnosis",
+		"bus_sweep": "Bus sweep",
+		"history": "History",
+		"machine_profile": "Machine profile",
+		"backups": "Parameter backups",
+		"params": "Parameters",
+		"device_list": "Device list",
+		"detect": "Detecting devices",
+		"scan": "Scanning",
+		"buses": "Buses"
+	},
 	"common": {
 		"act_read_config": "Reading the RS485 configuration",
 		"act_read_table": "Reading the servo table",

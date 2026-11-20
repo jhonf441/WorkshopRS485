@@ -9,7 +9,7 @@
 				<v-text-field v-model.trim="noteBackup" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.note_optional_e_g_before_tuning')" dense outlined hide-details />
 				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</div>
-			<lock-reason :min="reasonRole('backups')" />
+			<lock-reason :min="reasonRole('backups')" :subject="$t('plugins.WorkshopRS485.subjects.backups')" />
 			<div class="text-subtitle-2 mt-3">{{ $t('plugins.WorkshopRS485.paramsT3d.on_the_sd') }} <span class="grey--text text-caption">(sys/workshop/data/rs485-backups/)</span></div>
 			<div v-if="!backups.length" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.paramsT3d.there_are_no_backups_of_this') }}</div>
 			<div v-for="r in backups" :key="r.name" class="pt3-backup">

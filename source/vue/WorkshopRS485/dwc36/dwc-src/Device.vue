@@ -29,7 +29,7 @@
 					</v-btn>
 				</div>
 			</div>
-			<lock-reason :min="reasonRole('device')" class="mt-1" />
+			<lock-reason :min="reasonRole('device')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.device')" />
 			<!-- absent on purpose / without communication: what happened and what to do -->
 			<div v-if="cfg.absent && cfg.active !== false" class="d-flex align-center flex-wrap text-body-2 mt-2" style="gap:6px">
 				<v-icon small color="grey">mdi-eye-off-outline</v-icon>

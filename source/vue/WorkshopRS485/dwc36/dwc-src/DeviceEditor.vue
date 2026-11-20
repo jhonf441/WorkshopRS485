@@ -163,7 +163,7 @@
 				<v-btn small text @click="$emit('input', false)">{{ $t('plugins.WorkshopRS485.common.cancel') }}</v-btn>
 				<v-btn small color="primary" :loading="saving" :disabled="!valid || !can('rs485.save')" @click="$emit('save', copy(form))">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
 			</v-card-actions>
-			<lock-reason :min="reasonRole('editor')" class="px-4 pb-2" />
+			<lock-reason :min="reasonRole('editor')" class="px-4 pb-2" :subject="$t('plugins.WorkshopRS485.subjects.device_editor')" />
 		</v-card>
 	</v-dialog>
 </template>

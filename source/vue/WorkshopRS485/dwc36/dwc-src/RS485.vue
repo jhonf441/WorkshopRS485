@@ -58,7 +58,7 @@
 						/>
 						<v-btn color="primary" small :disabled="!cfg.buses.length || !can('rs485.save')" @click="newItem()"><v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.common.add_device') }}</v-btn>
 						<v-btn class="ml-2" small outlined color="primary" :disabled="!cfg.buses.length || !can('rs485.save')" :title="$t('plugins.WorkshopRS485.rS485.json_profile_hint')" @click="newItem(undefined, undefined, 'generic')"><v-icon small left>mdi-file-import-outline</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add_from_json_profile') }}</v-btn>
-						<lock-reason :min="reasonRole('list')" class="mt-2" />
+						<lock-reason :min="reasonRole('list')" class="mt-2" :subject="$t('plugins.WorkshopRS485.subjects.device_list')" />
 						<span v-if="!cfg.buses.length" class="text-caption grey--text ml-2">{{ $t('plugins.WorkshopRS485.rS485.first_create_a_bus_in_buses') }}</span>
 					</v-tab-item>
 
@@ -78,7 +78,7 @@
 								<v-switch :input-value="det.auto" dense hide-details class="mt-1" :label="$t('plugins.WorkshopRS485.rS485.search_for_new_devices_automatically')" @change="saveDetection({ auto: $event })" />
 								<v-switch :input-value="det.add" :disabled="!det.auto" dense hide-details class="mt-1" :label="$t('plugins.WorkshopRS485.rS485.add_them_automatically_no_axis_they')" @change="saveDetection({ add: $event })" />
 							</div>
-							<lock-reason :min="reasonRole('detect')" class="mt-1" />
+							<lock-reason :min="reasonRole('detect')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.detect')" />
 							<div class="text-caption grey--text mt-2">
 								{{ $t('plugins.WorkshopRS485.rS485.detection_note', { min: Math.round(det.each_s / 60) || 1, max: det.until }) }} <b>{{ $t('plugins.WorkshopRS485.common.no_axis') }}</b>{{ $t(hasActivity ? 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you' : 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you_no_activity') }}
 							</div>
@@ -203,7 +203,7 @@
 									</template>
 								</template>
 							</div>
-							<lock-reason :min="reasonRole('scan')" class="mt-1" />
+							<lock-reason :min="reasonRole('scan')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.scan')" />
 
 							<!-- avanzado -->
 							<v-expansion-panels flat class="mt-2 advanced">
@@ -243,7 +243,7 @@
 							<v-btn small text @click="discardBuses()">{{ $t('plugins.WorkshopRS485.common.discard') }}</v-btn>
 							<v-btn small color="primary" :loading="saving" :disabled="!can('rs485.save')" @click="saveBuses()">{{ $t('plugins.WorkshopRS485.rS485.save_buses') }}</v-btn>
 						</div>
-						<lock-reason :min="reasonRole('buses')" class="mt-1" />
+						<lock-reason :min="reasonRole('buses')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.buses')" />
 						<say-line v-if="!dialog" :text="msg || ''" :error="msgError" class="text-caption mt-2" />
 					</v-tab-item>
 

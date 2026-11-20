@@ -97,7 +97,7 @@
 			</div>
 		</div>
 
-		<lock-reason :min="reasonRole('params')" class="mt-2" />
+		<lock-reason :min="reasonRole('params')" class="mt-2" :subject="$t('plugins.WorkshopRS485.subjects.params')" />
 		<!-- barra de cambios -->
 		<div v-if="pending.length || pendingEeprom" class="pt3-changes">
 			<template v-if="pending.length">

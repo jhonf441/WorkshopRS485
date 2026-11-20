@@ -34,7 +34,7 @@
 			</v-btn>
 		</div>
 		<say-line :text="msg || ''" :error="msgError" class="text-body-2 mt-2" />
-		<lock-reason :min="reasonRole('history')" class="mt-1" />
+		<lock-reason :min="reasonRole('history')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.history')" />
 
 		<div v-if="!rows.length && !loading" class="empty mt-3">
 			<v-icon large color="grey">mdi-history</v-icon>

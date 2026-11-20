@@ -16,7 +16,7 @@
 					<v-icon small left>mdi-stethoscope</v-icon>{{ $t('plugins.WorkshopRS485.common.diagnose') }}
 				</v-btn>
 			</div>
-			<lock-reason v-if="bi === 0" :min="reasonRole('diagnose')" class="mt-1" />
+			<lock-reason v-if="bi === 0" :min="reasonRole('diagnose')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.diagnosis')" />
 			<div v-if="busy === b.id" class="text-caption mt-2">{{ $t('plugins.WorkshopRS485.diagnosis.checking_the_adapter_and_asking_each') }}</div>
 
 			<template v-if="results[b.id]">
@@ -146,7 +146,7 @@
 					<span class="text-caption dim"><span>{{ $t('plugins.WorkshopRS485.diagnosis.takes_up_to') }}</span> {{ estimated }}</span>
 				</v-col>
 			</v-row>
-			<lock-reason v-if="!buses.length || reasonRole('sweep') !== reasonRole('diagnose')" :min="reasonRole('sweep')" />
+			<lock-reason v-if="!buses.length || reasonRole('sweep') !== reasonRole('diagnose')" :min="reasonRole('sweep')" :subject="$t('plugins.WorkshopRS485.subjects.bus_sweep')" />
 			<div v-if="isDuet" class="text-caption dim mt-1">{{ $t('plugins.WorkshopRS485.diagnosis.on_the_duet_s_rs485_the') }}</div>
 
 			<template v-if="sweep.total">

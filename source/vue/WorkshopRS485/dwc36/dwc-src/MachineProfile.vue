@@ -21,7 +21,7 @@
 				<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.machineProfile.name_register_or_word')" dense outlined hide-details clearable class="pe-search" />
 				<say-line :text="msg || ''" :error="msgError" class="text-caption" />
 			</div>
-			<lock-reason :min="reasonRole('profile')" class="px-3" />
+			<lock-reason :min="reasonRole('profile')" class="px-3" :subject="$t('plugins.WorkshopRS485.subjects.machine_profile')" />
 			<div v-if="!params.length" class="text-body-2 grey--text pa-3">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_has_no_parameters') }}</div>
 			<v-simple-table v-else dense class="pe-table">
 				<thead>
