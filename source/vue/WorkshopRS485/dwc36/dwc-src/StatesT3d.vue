@@ -275,7 +275,7 @@ export default {
 	min-width: 0;
 }
 .et3-note {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--tp-faint, #9e9e9e);
 }
 .et3-value {
@@ -286,7 +286,7 @@ export default {
 	white-space: nowrap;
 }
 .et3-value small {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--tp-faint, #9e9e9e);
 	font-weight: 400;
 }
@@ -297,7 +297,7 @@ export default {
 	gap: 3px;
 }
 .et3-bit {
-	font-size: 10px;
+	font-size: 12px;
 	font-family: monospace;
 	padding: 1px 4px;
 	border-radius: 3px;

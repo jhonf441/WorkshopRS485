@@ -1,5 +1,5 @@
 <template>
-	<v-dialog :value="value" max-width="780" scrollable persistent :fullscreen="$vuetify.breakpoint.xsOnly" @input="$emit('input', $event)">
+	<v-dialog :value="value" content-class="workshop-theme" max-width="780" scrollable persistent :fullscreen="$vuetify.breakpoint.xsOnly" @input="$emit('input', $event)">
 		<v-card v-if="form" class="editor-disp">
 			<v-card-title class="py-3">
 				<v-icon left>{{ newItem ? 'mdi-plus-circle-outline' : 'mdi-pencil' }}</v-icon>
@@ -15,10 +15,10 @@
 					<v-row dense>
 						<v-col cols="12" sm="5"><v-text-field v-model.trim="form.name" :label="$t('plugins.WorkshopRS485.deviceEditor.name_e_g_z_axis_servo')" dense outlined hide-details /></v-col>
 						<v-col cols="12" sm="4">
-							<div class="help-tip-row"><v-select v-model="form.profile" :items="profiles" item-value="id" item-text="name" :label="$t('plugins.WorkshopRS485.deviceEditor.device_type')" dense outlined hide-details :disabled="!newItem" @change="changeProfile" /><help-tip :title="ht('profile_title')" :what="ht('profile_what')" :why="ht('profile_why')" :how="ht('profile_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.profile" :items="profiles" item-value="id" item-text="name" :label="$t('plugins.WorkshopRS485.deviceEditor.device_type')" dense outlined hide-details :disabled="!newItem" @change="changeProfile" /></div>
 						</v-col>
 						<v-col cols="12" sm="3">
-							<div class="help-tip-row"><v-select v-model="form.axis" :items="optionsAxis" :label="$t('plugins.WorkshopRS485.deviceEditor.axis_it_moves')" dense outlined hide-details /><help-tip :title="ht('axis_title')" :what="ht('axis_what')" :why="ht('axis_why')" :how="ht('axis_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.axis" :items="optionsAxis" :label="$t('plugins.WorkshopRS485.deviceEditor.axis_it_moves')" dense outlined hide-details /></div>
 						</v-col>
 					</v-row>
 					<div v-if="descProfile" class="text-caption grey--text mt-1">{{ descProfile }}</div>
@@ -31,6 +31,7 @@
 							{{ $t('plugins.WorkshopRS485.deviceEditor.if_this_device_fails_the_job') }} <b>{{ $t('plugins.WorkshopRS485.deviceEditor.fault_word') }}</b> {{ $t(hasLights ? 'plugins.WorkshopRS485.deviceEditor.fault_explain' : 'plugins.WorkshopRS485.deviceEditor.fault_explain_no_lights', { axis: form.axis }) }}
 						</template>
 					</div>
+					<help-fold class="mt-2" :items="[{ title: ht('profile_title'), what: ht('profile_what'), why: ht('profile_why'), how: ht('profile_how') }, { title: ht('axis_title'), what: ht('axis_what'), why: ht('axis_why'), how: ht('axis_how') }]" />
 				</div>
 
 				<!-- ===== Conexion ===== -->
@@ -38,9 +39,9 @@
 					<div class="block-title"><v-icon small left>mdi-serial-port</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.connection') }}</div>
 					<v-row dense>
 						<v-col cols="12" sm="6">
-							<div class="help-tip-row"><v-select v-model="form.bus" :items="buses" item-value="id" :item-text="textBus" :label="$t('plugins.WorkshopRS485.deviceEditor.bus_adapter')" dense outlined hide-details /><help-tip :title="ht('bus_title')" :what="ht('bus_what')" :why="ht('bus_why')" :how="ht('bus_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.bus" :items="buses" item-value="id" :item-text="textBus" :label="$t('plugins.WorkshopRS485.deviceEditor.bus_adapter')" dense outlined hide-details /></div>
 						</v-col>
-						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.address" type="number" min="1" max="247" :label="$t('plugins.WorkshopRS485.deviceEditor.address')" dense outlined hide-details /><help-tip :title="ht('address_title')" :what="ht('address_what')" :why="ht('address_why')" :how="ht('address_how')" /></div></v-col>
+						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.address" type="number" min="1" max="247" :label="$t('plugins.WorkshopRS485.deviceEditor.address')" dense outlined hide-details /></div></v-col>
 					</v-row>
 					<div v-if="!buses.length" class="text-caption warning--text mt-1">
 						{{ $t('plugins.WorkshopRS485.deviceEditor.there_are_no_buses_yet_create') }} <b>{{ $t('plugins.WorkshopRS485.common.buses_and_adapters') }}</b>.
@@ -49,10 +50,9 @@
 						{{ $t('plugins.WorkshopRS485.deviceEditor.address_used_by', { n: form.address }) }} <b>{{ crashAddress.name || crashAddress.id }}</b> {{ $t('plugins.WorkshopRS485.deviceEditor.on_this_bus') }}
 					</div>
 					<div class="d-flex align-center flex-wrap mt-2" style="gap:8px">
-						<v-btn x-small outlined :loading="scanning" :disabled="!form.bus" @click="$emit('scan', form.bus)">
-							<v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.scan_bus_addresses_1_32') }}
+						<v-btn small outlined :loading="scanning" :disabled="!form.bus" @click="$emit('scan', form.bus)">
+							<v-icon small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.scan_bus_addresses_1_32') }}
 						</v-btn>
-						<help-tip :title="ht('scan_title')" :what="ht('scan_what')" :why="ht('scan_why')" :how="ht('scan_how')" />
 						<template v-if="found[form.bus]">
 							<span class="text-caption">{{ $t('plugins.WorkshopRS485.common.answering') }}</span>
 							<v-chip v-for="a in found[form.bus]" :key="a" x-small :color="a === form.address ? 'primary' : ''" @click="form.address = a">{{ a }}</v-chip>
@@ -73,6 +73,7 @@
 						</div>
 						<div class="text-caption grey--text mt-1">{{ $t('plugins.WorkshopRS485.deviceEditor.after_changing_them_on_the_panel') }}</div>
 					</v-sheet>
+					<help-fold class="mt-2" :items="[{ title: ht('bus_title'), what: ht('bus_what'), why: ht('bus_why'), how: ht('bus_how') }, { title: ht('address_title'), what: ht('address_what'), why: ht('address_why'), how: ht('address_how') }, { title: ht('scan_title'), what: ht('scan_what'), why: ht('scan_why'), how: ht('scan_how') }]" />
 				</div>
 
 				<!-- ===== Vigilancia ===== -->
@@ -80,34 +81,35 @@
 					<div class="block-title"><v-icon small left>mdi-shield-check-outline</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.monitoring') }}</div>
 					<v-row dense>
 						<v-col cols="12" sm="6">
-							<div class="help-tip-row"><v-select v-model="form.options.action_fault" :items="actionsFault" :label="$t('plugins.WorkshopRS485.deviceEditor.on_a_fault')" dense outlined hide-details /><help-tip :title="ht('on_fault_title')" :what="ht('on_fault_what')" :why="ht('on_fault_why')" :how="ht('on_fault_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.options.action_fault" :items="actionsFault" :label="$t('plugins.WorkshopRS485.deviceEditor.on_a_fault')" dense outlined hide-details /></div>
 						</v-col>
 						<v-col cols="12" sm="6" v-if="form.options.action_fault === 'pause'">
-							<div class="help-tip-row"><v-select v-model="form.options.in_live" :items="actionsLive" :label="$t('plugins.WorkshopRS485.deviceEditor.if_the_job_is_live_no')" dense outlined hide-details /><help-tip :title="ht('in_live_title')" :what="ht('in_live_what')" :why="ht('in_live_why')" :how="ht('in_live_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.options.in_live" :items="actionsLive" :label="$t('plugins.WorkshopRS485.deviceEditor.if_the_job_is_live_no')" dense outlined hide-details /></div>
 						</v-col>
 						<v-col cols="12" sm="6" v-if="form.axis && form.options.action_fault !== 'nothing'">
-							<div class="help-tip-row"><v-select v-model="form.options.in_motion" :items="actionsMotion" :label="$t('plugins.WorkshopRS485.deviceEditor.if_fails_while_axis_moves', { axis: form.axis })" dense outlined hide-details /><help-tip :title="ht('in_motion_title')" :what="ht('in_motion_what')" :why="ht('in_motion_why')" :how="ht('in_motion_how')" /></div>
+							<div class="help-tip-row"><v-select v-model="form.options.in_motion" :items="actionsMotion" :label="$t('plugins.WorkshopRS485.deviceEditor.if_fails_while_axis_moves', { axis: form.axis })" dense outlined hide-details /></div>
 						</v-col>
 						<v-col cols="12" sm="6" class="d-flex align-center">
-							<div class="help-tip-row"><v-switch v-model="form.options.pause_without_com" :label="$t('plugins.WorkshopRS485.deviceEditor.losing_communication_is_also_a_fault')" dense hide-details class="mt-0" /><help-tip :title="ht('comm_fault_title')" :what="ht('comm_fault_what')" :why="ht('comm_fault_why')" :how="ht('comm_fault_how')" /></div>
+							<div class="help-tip-row"><v-switch v-model="form.options.pause_without_com" :label="$t('plugins.WorkshopRS485.deviceEditor.losing_communication_is_also_a_fault')" dense hide-details class="mt-0" /></div>
 						</v-col>
 					</v-row>
 					<div class="text-caption grey--text mt-1">
 						{{ $t('plugins.WorkshopRS485.deviceEditor.a_job_run_from_a_file') }}
 					</div>
 					<v-row dense class="mt-2">
-						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.poll_s" type="number" step="0.1" min="0.1" :label="$t('plugins.WorkshopRS485.deviceEditor.read_every_s')" dense outlined hide-details /><help-tip :title="ht('poll_title')" :what="ht('poll_what')" :why="ht('poll_why')" :how="ht('poll_how')" /></div></v-col>
-						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.faults_com_limit" type="number" min="1" :label="$t('plugins.WorkshopRS485.deviceEditor.consecutive_comm_failures')" dense outlined hide-details /><help-tip :title="ht('comm_limit_title')" :what="ht('comm_limit_what')" :why="ht('comm_limit_why')" :how="ht('comm_limit_how')" /></div></v-col>
+						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.poll_s" type="number" step="0.1" min="0.1" :label="$t('plugins.WorkshopRS485.deviceEditor.read_every_s')" dense outlined hide-details /></div></v-col>
+						<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.faults_com_limit" type="number" min="1" :label="$t('plugins.WorkshopRS485.deviceEditor.consecutive_comm_failures')" dense outlined hide-details /></div></v-col>
 						<template v-if="form.profile === 't3d'">
-							<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.torque_max" type="number" :label="$t('plugins.WorkshopRS485.deviceEditor.max_torque')" dense outlined hide-details /><help-tip :title="ht('torque_title')" :what="ht('torque_what')" :why="ht('torque_why')" :how="ht('torque_how')" /></div></v-col>
-							<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model="form.options.current_max" type="number" step="0.1" :label="$t('plugins.WorkshopRS485.deviceEditor.max_current_a')" :placeholder="$t('plugins.WorkshopRS485.deviceEditor.empty_means_no')" dense outlined hide-details /><help-tip :title="ht('current_title')" :what="ht('current_what')" :why="ht('current_why')" :how="ht('current_how')" /></div></v-col>
+							<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model.number="form.options.torque_max" type="number" :label="$t('plugins.WorkshopRS485.deviceEditor.max_torque')" dense outlined hide-details /></div></v-col>
+							<v-col cols="6" sm="3"><div class="help-tip-row"><v-text-field v-model="form.options.current_max" type="number" step="0.1" :label="$t('plugins.WorkshopRS485.deviceEditor.max_current_a')" :placeholder="$t('plugins.WorkshopRS485.deviceEditor.empty_means_no')" dense outlined hide-details /></div></v-col>
 						</template>
 					</v-row>
 
+						<help-fold class="mt-3" :items="[{ title: ht('on_fault_title'), what: ht('on_fault_what'), why: ht('on_fault_why'), how: ht('on_fault_how') }, (form.options.action_fault === 'pause') ? { title: ht('in_live_title'), what: ht('in_live_what'), why: ht('in_live_why'), how: ht('in_live_how') } : null, (form.axis && form.options.action_fault !== 'nothing') ? { title: ht('in_motion_title'), what: ht('in_motion_what'), why: ht('in_motion_why'), how: ht('in_motion_how') } : null, { title: ht('comm_fault_title'), what: ht('comm_fault_what'), why: ht('comm_fault_why'), how: ht('comm_fault_how') }, { title: ht('poll_title'), what: ht('poll_what'), why: ht('poll_why'), how: ht('poll_how') }, { title: ht('comm_limit_title'), what: ht('comm_limit_what'), why: ht('comm_limit_why'), how: ht('comm_limit_how') }, (form.profile === 't3d') ? { title: ht('torque_title'), what: ht('torque_what'), why: ht('torque_why'), how: ht('torque_how') } : null, (form.profile === 't3d') ? { title: ht('current_title'), what: ht('current_what'), why: ht('current_why'), how: ht('current_how') } : null, { title: ht('absent_title'), what: ht('absent_what'), why: ht('absent_why'), how: ht('absent_how') }].filter(Boolean)" />
 					<!-- JSON equipment profile (2026-10-10): optional; fills the tables
 					     of parameters and alarms and the watched registers -->
 					<template v-if="form.profile === 'generic'">
-						<div class="text-subtitle-2 mt-3 mb-1">{{ $t('plugins.WorkshopRS485.common.device_profile') }} <span class="grey--text font-weight-regular">{{ $t('plugins.WorkshopRS485.deviceEditor.optional') }}</span><help-tip :title="ht('json_profile_title')" :what="ht('json_profile_what')" :why="ht('json_profile_why')" :how="ht('json_profile_how')" /></div>
+						<div class="text-subtitle-2 mt-3 mb-1">{{ $t('plugins.WorkshopRS485.common.device_profile') }} <span class="grey--text font-weight-regular">{{ $t('plugins.WorkshopRS485.deviceEditor.optional') }}</span></div>
 						<div class="text-caption grey--text mb-2">
 							{{ $t('plugins.WorkshopRS485.deviceEditor.a_json_file_with_the_device') }}
 						</div>
@@ -127,15 +129,16 @@
 							<li v-for="(a, i) in profileNotices.slice(0, 12)" :key="i">{{ a }}</li>
 							<li v-if="profileNotices.length > 12">{{ $t('plugins.WorkshopRS485.deviceEditor.and_n_more_warnings', { n: profileNotices.length - 12 }) }}</li>
 						</ul>
+						<help-fold class="mt-2" :items="[{ title: ht('json_profile_title'), what: ht('json_profile_what'), why: ht('json_profile_why'), how: ht('json_profile_how') }]" />
 					</template>
 
 					<!-- registros del generico -->
 					<template v-if="form.profile === 'generic'">
-						<div class="text-subtitle-2 mt-3 mb-1 d-flex align-center">{{ $t('plugins.WorkshopRS485.deviceEditor.registers_to_read') }}<help-tip :title="ht('records_title')" :what="ht('records_what')" :why="ht('records_why')" :how="ht('records_how')" /></div>
+						<div class="text-subtitle-2 mt-3 mb-1 d-flex align-center">{{ $t('plugins.WorkshopRS485.deviceEditor.registers_to_read') }}</div>
 						<div v-for="(r, i) in form.options.records" :key="i" class="reg-row">
 							<v-text-field v-model.trim="r.name" :label="$t('plugins.WorkshopRS485.common.name')" dense outlined hide-details />
 							<v-text-field v-model.number="r.record" type="number" :label="$t('plugins.WorkshopRS485.common.register')" dense outlined hide-details />
-							<v-select v-model="r.func" :items="[{ text: '3 holding', value: 3 }, { text: '4 input', value: 4 }]" :label="$t('plugins.WorkshopRS485.common.function')" dense outlined hide-details />
+							<v-select v-model="r.func" :items="[{ text: '3 holding', value: 3 }, { text: '4 input', value: 4 }].filter(Boolean)" :label="$t('plugins.WorkshopRS485.common.function')" dense outlined hide-details />
 							<v-text-field v-model.number="r.scale" type="number" step="any" :label="$t('plugins.WorkshopRS485.deviceEditor.scale')" dense outlined hide-details />
 							<v-text-field v-model.trim="r.unit" :label="$t('plugins.WorkshopRS485.deviceEditor.unit')" dense outlined hide-details />
 							<v-text-field v-model="r.min" type="number" :label="$t('plugins.WorkshopRS485.deviceEditor.min')" dense outlined hide-details />
@@ -144,9 +147,10 @@
 							<v-checkbox v-model="r.writable" :label="$t('plugins.WorkshopRS485.common.write')" dense hide-details class="mt-0" />
 							<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" icon small @click="form.options.records.splice(i, 1)"><v-icon small>mdi-delete</v-icon></v-btn>
 						</div>
-						<v-btn x-small text color="primary" @click="form.options.records.push({ name: '', record: null, func: 3, scale: 1, unit: '', with_sign: false, writable: false })">
-							<v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.add_register') }}
+						<v-btn small text color="primary" @click="form.options.records.push({ name: '', record: null, func: 3, scale: 1, unit: '', with_sign: false, writable: false })">
+							<v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.deviceEditor.add_register') }}
 						</v-btn>
+						<help-fold class="mt-2" :items="[{ title: ht('records_title'), what: ht('records_what'), why: ht('records_why'), how: ht('records_how') }]" />
 					</template>
 				</div>
 				<say-line :text="msg || ''" :error="msgError" class="text-caption mt-2" />
@@ -155,7 +159,7 @@
 			<v-card-actions class="flex-wrap" style="gap:6px">
 				<v-switch v-model="form.active" :label="$t('plugins.WorkshopRS485.deviceEditor.active')" dense hide-details class="mt-0 ml-2 mr-4" />
 				<v-switch :input-value="!!form.absent" :disabled="!form.active" :label="$t('plugins.WorkshopRS485.deviceEditor.absent_on_purpose')" dense hide-details class="mt-0 mr-4"
-					:title="$t('plugins.WorkshopRS485.deviceEditor.absent_hint')" @change="putAbsent" /><help-tip :title="ht('absent_title')" :what="ht('absent_what')" :why="ht('absent_why')" :how="ht('absent_how')" />
+					:title="$t('plugins.WorkshopRS485.deviceEditor.absent_hint')" @change="putAbsent" />
 				<v-spacer />
 				<v-btn v-if="!newItem" small text :disabled="!can('rs485.save')" :color="armed ? 'error' : 'grey'" @click="armDelete">
 					{{ armed ? $t('plugins.WorkshopRS485.deviceEditor.tap_again_to_remove_it') : $t('plugins.WorkshopRS485.deviceEditor.remove_device') }}
@@ -170,7 +174,7 @@
 
 <script>
 import i18n from '../../i18n'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 
 'use strict'
 
@@ -184,6 +188,7 @@ import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData, profilePlan, busMismatch, importDeviceProfile } from './device-exchange.js'
 import LockReason from './LockReason.vue' // vue/_shared36
+import { WF_ARM_WINDOW } from './workshop-action.js' // vue/_shared36 (FASE2): the double touch time of the family, 4000 ms
 import SayLine from './SayLine.vue' // vue/_shared36
 
 function copy(o) {
@@ -191,7 +196,7 @@ function copy(o) {
 }
 
 export default {
-	components: { SayLine, LockReason, HelpTip },
+	components: { HelpFold, SayLine, LockReason, },
 	mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['form', 'profileMsg', 'profileError', 'profileNotices'],
@@ -376,7 +381,7 @@ export default {
 		removeProfile() {
 			if (!this.armedProfile) {
 				this.armedProfile = true;
-				setTimeout(() => { this.armedProfile = false; }, 4000);
+				setTimeout(() => { this.armedProfile = false; }, WF_ARM_WINDOW);
 				return;
 			}
 			this.armedProfile = false;
@@ -396,7 +401,7 @@ export default {
 			}
 			this.armed = true;
 			clearTimeout(this.armedTimer);
-			this.armedTimer = setTimeout(() => { this.armed = false; }, 4000);
+			this.armedTimer = setTimeout(() => { this.armed = false; }, WF_ARM_WINDOW);
 		}
 	}
 };

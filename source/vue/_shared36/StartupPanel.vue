@@ -1,7 +1,9 @@
 <template>
 	<!-- Start-up (2026-10-16): a quiet strip on the page; the card itself is a dialog with one card per FUNCTION.
 	     The files and things this page expects from the machine, and the state of each:
-	     green = configured, orange = only the example, red = missing, grey = does not apply to your machine.
+	     green = configured, orange = only the example, red = missing, grey = does not apply to your machine, neutral = skipped
+	     ("I do not use it": chosen with "Do not use", or an optional function that is off). Skipped rows are not steps: they do not count as
+	     pending, the guide passes over them, and they wait in their own section ("Not in use") with "Use this again".
 	     The texts are the ones of the plugin that uses it: plugins.<plugin>.startup.* (generic ones + the labels of the rows).
 	     Nothing here overwrites a file: "Create the example" asks the service, which never overwrites.
 	     Assistant (2026-10-15): a row may carry que / paraQue / siFalta (plain explanation) and asistente (questions +
@@ -14,7 +16,7 @@
 		     Nothing to do but rows nobody could check (no session): a quiet icon in the session blue, no words: the bar already carries the one
 		     "Sign in" chip, and "1 step pending" next to it was not a step at all. -->
 		<v-chip v-if="summary.pending" small outlined color="warning" class="startup-chip" :title="chipHelp" @click="openDialog">
-			<v-icon small left>mdi-rocket-launch-outline</v-icon>{{ tt('chip_pending', { n: summary.pending }) }}
+			<v-icon small left>mdi-rocket-launch-outline</v-icon>{{ tt(summary.pending === 1 ? 'chip_pending_one' : 'chip_pending', { n: summary.pending }) }}
 		</v-chip>
 		<v-btn v-else icon small class="startup-chip" :title="chipHelp" @click="openDialog">
 			<v-icon small :color="summary.ready ? 'success' : 'info'">mdi-rocket-launch-outline</v-icon>
@@ -141,7 +143,7 @@
 			<template v-if="!summary.session">
 			<div class="d-flex align-baseline mb-1">
 				<span class="text-subtitle-1 font-weight-medium flex-grow-1">{{ summary.ready ? tt('modal_all_ready') : tt('modal_progress', { a: summary.total - summary.pending, b: summary.total }) }}</span>
-				<span class="text-caption" :class="summary.ready ? 'success--text' : 'warning--text'">{{ summary.ready ? tt('summary_ready') : tt('summary_pending', { n: summary.pending }) }}</span>
+				<span class="text-caption" :class="summary.ready ? 'success--text' : 'warning--text'">{{ summary.ready ? (summary.skipped ? tt('summary_skipped', { n: summary.skipped }) : tt('summary_ready')) : tt('summary_pending', { n: summary.pending }) }}</span>
 			</div>
 			<v-progress-linear :value="percentage" :color="summary.ready ? 'success' : 'primary'" rounded height="8" class="mb-2" />
 			<div class="text-caption startup-sub mb-3">{{ summary.ready ? tt('modal_ready_hint') : tt('modal_hint') }}</div>
@@ -167,7 +169,7 @@
 					<div v-for="f in g.rows" :key="f.id" class="d-flex align-center flex-wrap startup-row rounded px-2" :title="f.def.help && g.rows.length === 1 ? tt(f.def.help) : ''">
 						<v-icon x-small :color="color(f.state)" class="mr-2">mdi-circle</v-icon>
 						<span class="text-body-2 flex-grow-1 startup-rowtext"><template v-if="g.rows.length > 1">{{ f.def.title || tt(f.def.label) }} - </template><span :class="'startup-text-' + f.state">{{ textState(f) }}</span></span>
-						<v-btn v-if="f.def.action && f.state !== 'configured' && f.state !== 'na'" small outlined color="primary" @click="$emit('action', f.def.action)">{{ f.def.actionText }}</v-btn>
+						<v-btn v-if="f.def.action && f.state !== 'configured' && f.state !== 'skipped' && f.state !== 'na'" small outlined color="primary" @click="$emit('action', f.def.action)">{{ f.def.actionText }}</v-btn>
 						<v-btn v-if="f.file && (f.state === 'configured' || f.state === 'example')" small outlined :disabled="locked" :title="locked ? undefined : tt('edit_tip')" @click="edit(f)">{{ tt('edit') }}</v-btn>
 						<v-btn v-else-if="f.file && f.state === 'missing' && f.exists && !f.def.wizard" small outlined :disabled="locked" :title="locked ? undefined : tt('make_tip')" @click="create(f)">{{ tt('make') }}</v-btn>
 					</div>
@@ -176,7 +178,8 @@
 					<v-btn v-if="idsWizard(g).length" color="primary" class="startup-btn" :disabled="locked" :title="locked ? undefined : tt('create_help_tip')" @click="startWizard(idsWizard(g))">{{ tt('create_help') }}</v-btn>
 					<v-btn v-if="g.rows.some(f => explanation(f.def))" text small color="primary" @click="$set(explained, g.id, !explained[g.id])">{{ explained[g.id] ? tt('what_is_hide') : tt('what_is') }}</v-btn>
 					<v-spacer />
-					<v-btn text small :title="tt('hide_tip')" @click="hideGroup(g)">{{ tt('hide') }}</v-btn>
+					<v-btn v-if="g.state === 'skipped'" v-show="chosen(g)" text small color="primary" :title="tt('use_again_tip')" @click="useAgain(g)">{{ tt('use_again') }}</v-btn>
+					<v-btn v-else-if="g.state !== 'configured' && g.state !== 'na'" text small :title="tt('omit_tip')" @click="hideGroup(g)">{{ tt('omit') }}</v-btn>
 				</div>
 				<div v-if="explained[g.id]" class="px-3 pb-3">
 					<div v-for="f in g.rows.filter(x => explanation(x.def)).slice(0, 1)" :key="f.id + '-exp'" class="startup-exp text-body-2">
@@ -190,9 +193,10 @@
 				<span class="text-body-2 flex-grow-1">{{ tt('ready_n', { n: groupsReady.length }) }}</span>
 				<v-btn small text color="primary" @click="showReady = !showReady">{{ showReady ? tt('ready_hide') : tt('ready_show') }}</v-btn>
 			</div>
-			<div v-if="nOcultas" class="text-caption startup-sub text-center">
-				{{ tt('hidden_n', { n: nOcultas }) }}
-				<v-btn x-small text color="primary" @click="show()">{{ tt('show_again') }}</v-btn>
+			<div v-if="groupsSkipped.length" class="d-flex align-center flex-wrap mb-3 startup-skipline">
+				<v-icon small class="mr-2 startup-text-skipped">mdi-minus-circle-outline</v-icon>
+				<span class="text-body-2 flex-grow-1">{{ tt('skipped_n', { n: groupsSkipped.length }) }}</span>
+				<v-btn small text color="primary" @click="showSkipped = !showSkipped">{{ showSkipped ? tt('skipped_hide') : tt('skipped_show') }}</v-btn>
 			</div>
 			<slot />
 		</div>
@@ -241,7 +245,7 @@ export default {
 		recheck: { type: Function, default: null }
 	},
 	data() {
-		return { list: null, hidden: [], open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false, refusal: '' };
+		return { list: null, hidden: [], serverOmitted: [], showSkipped: false, open: null, loaded: false, editing: false, editFilename: '', editText: '', explained: {}, wizard: null, dialog: false, reported: '', showReady: false, copied: false, refusal: '' };
 	},
 	computed: {
 		signedOutNow() {
@@ -283,13 +287,17 @@ export default {
 			return service.concat(this.defs);
 		},
 		rows() {
-			return startupRows(this.allDefs, this.list, this.hidden);
+			return startupRows(this.allDefs, this.list, this.omitted);
+		},
+		// what the person decided not to use: this browser's list plus the one the service keeps (the kiosk and the phone must agree)
+		omitted() {
+			return this.hidden.concat(this.serverOmitted.filter(id => this.hidden.indexOf(id) < 0));
 		},
 		rowsVisible() {
-			return this.rows.filter(f => !f.hidden && !f.withoutData);
+			return this.rows.filter(f => !f.withoutData);
 		},
-		nOcultas() {
-			return this.rows.filter(f => f.hidden).length;
+		nSkipped() {
+			return this.rows.filter(f => f.state === 'skipped').length;
 		},
 		summary() {
 			return startupSummary(this.rows);
@@ -301,14 +309,14 @@ export default {
 			return this.loaded && this.$store.getters.isConnected;
 		},
 		percentage() {
-			return this.summary.total ? Math.round(((this.summary.total - this.summary.pending) / this.summary.total) * 100) : 100;
+			return this.summary.total ? Math.round(((this.summary.total - this.summary.pending - this.summary.session) / this.summary.total) * 100) : 100;
 		},
 		stepPct() {
 			return this.wizard ? Math.round(((this.wizard.est.i + 1) / this.wizard.est.ids.length) * 100) : 0;
 		},
 		// one card per FUNCTION: rows with the same grupo go together; a row without grupo is a card of its own
 		groups() {
-			const order = ['missing', 'session', 'example', 'configured', 'na'];
+			const order = ['missing', 'session', 'example', 'configured', 'skipped', 'na'];
 			const by = {};
 			const out = [];
 			this.rowsVisible.forEach(f => {
@@ -341,10 +349,17 @@ export default {
 			return this.groups.filter(g => ['missing', 'session', 'example'].includes(g.state));
 		},
 		groupsReady() {
-			return this.groups.filter(g => !['missing', 'session', 'example'].includes(g.state));
+			return this.groups.filter(g => !['missing', 'session', 'example', 'skipped'].includes(g.state));
+		},
+		// cards of functions the person does not use (or optional ones that are off): own section, never mixed with the ones to do
+		groupsSkipped() {
+			return this.groups.filter(g => g.state === 'skipped');
 		},
 		groupsShown() {
-			return this.showReady ? this.groupsPending.concat(this.groupsReady) : this.groupsPending;
+			let out = this.groupsPending;
+			if (this.showReady) out = out.concat(this.groupsReady);
+			if (this.showSkipped) out = out.concat(this.groupsSkipped);
+			return out;
 		},
 		// what is missing, in plain words, in order
 		missingList() {
@@ -487,10 +502,10 @@ export default {
 		textState(f) {
 			if (f.def.text) return f.def.text; // already translated by the page (RS485 takes it from its guide)
 			const o = f.def.texts && f.def.texts[f.state];
-			return this.tt(o || 'state_' + f.state, f.def.params);
+			return this.tt(o || 'state_' + f.state, f.def.params); // a skipped row says "Not in use. You can turn it on whenever you want" unless the page has its own words (texts.skipped)
 		},
 		color(state) {
-			return { configured: 'success', example: 'warning', missing: 'error', session: 'info', na: 'grey' }[state] || 'grey';
+			return { configured: 'success', example: 'warning', missing: 'error', session: 'info', skipped: 'blue-grey', na: 'grey' }[state] || 'grey';
 		},
 		explanation(def) {
 			return startupExplanation(def);
@@ -521,10 +536,15 @@ export default {
 		// asking for a PIN: a background report is not worth a dialog.
 		report(r) {
 			if (!this.loaded || this.list === null) return;
-			const key = r.pending + '/' + r.total;
+			// the rows as the machine says them + the ids put away: the service applies the decisions itself (same rules), so its page and its home
+			// count like this card even when this page is not open. The counts go too (what an older service reads).
+			const rows = this.rows.filter(f => !f.withoutData && f.rawState !== 'na' && f.rawState !== 'skipped').map(f => ({ id: f.id, state: f.rawState, optional: f.optional }));
+			const key = r.pending + '/' + r.total + '/' + r.skipped + '/' + JSON.stringify(rows) + JSON.stringify(this.omitted);
 			if (this.reported === key) return;
 			this.reported = key;
-			api('readiness.report', { plugin: this.plugin, pending: r.pending, total: r.total }, { noLogin: true, quiet: true }).catch(() => {
+			const args = { plugin: this.plugin, pending: r.pending, total: r.total, rows, omitted: this.omitted.slice() };
+			if (r.skipped) args.skipped = r.skipped;
+			api('readiness.report', args, { noLogin: true, quiet: true }).catch(() => {
 				this.reported = '';
 			});
 		},
@@ -548,6 +568,7 @@ export default {
 				this.list = null;
 				this.refusal = e && e.code === 'forbidden' ? 'role' : '';
 			}
+			await this.readOmitted();
 			if (this.recheck) {
 				try {
 					await this.recheck();
@@ -578,18 +599,43 @@ export default {
 			}
 			this.editing = true;
 		},
+		// "Do not use": the decision is kept in this browser (it answers at once, with no session) and in the service (settings file "startup",
+		// one list per plugin: every screen and the phone see it). A role that cannot write the service keeps it here only.
 		hide(f) {
-			if (this.hidden.indexOf(f.id) < 0) this.saveHidden(this.hidden.concat([f.id]));
+			this.omit([f.id]);
 		},
-		show() {
-			this.saveHidden([]);
+		omit(ids) {
+			this.saveOmitted(this.omitted.concat(ids.filter(id => this.omitted.indexOf(id) < 0)));
 		},
-		saveHidden(list) {
-			this.hidden = list;
+		// "Use this again": the rows of the card come back to what they really are (pending, or ready)
+		useAgain(g) {
+			const ids = g.rows.map(f => f.id);
+			this.saveOmitted(this.omitted.filter(id => ids.indexOf(id) < 0));
+		},
+		// the card has at least one row the person put away (an optional function that is simply off has nothing to take back)
+		chosen(g) {
+			return g.rows.some(f => f.skipReason === 'chosen');
+		},
+		saveOmitted(list) {
+			this.hidden = list.slice();
+			this.serverOmitted = list.slice();
 			try {
 				localStorage.setItem(this.key, JSON.stringify(list));
 			} catch (e) {
 				/* not critical */
+			}
+			api('settings.merge', { name: 'startup', patch: { [this.plugin]: list } }, { quiet: true, noLogin: true }).catch(() => {
+				/* a role below technician or no service: the decision stays in this browser */
+			});
+		},
+		// what the service remembers (read with the files; no answer = what this browser has)
+		async readOmitted() {
+			try {
+				const r = await api('settings.get', { name: 'startup' }, { quiet: true, noLogin: true });
+				const v = r && r.value && r.value[this.plugin];
+				this.serverOmitted = Array.isArray(v) ? v.filter(id => typeof id === 'string') : [];
+			} catch (e) {
+				/* keep what this browser has */
 			}
 		},
 
@@ -625,7 +671,7 @@ export default {
 			return g.rows.filter(f => this.isPending(f) && f.def.wizard).map(f => f.id);
 		},
 		hideGroup(g) {
-			this.saveHidden(this.hidden.concat(g.rows.map(f => f.id).filter(id => this.hidden.indexOf(id) < 0)));
+			this.omit(g.rows.map(f => f.id));
 		},
 		// id: one row (string), several rows (array) or null = every pending row
 		startWizard(id) {
@@ -719,6 +765,8 @@ export default {
 .startup-icon-example { background: rgba(230, 81, 0, 0.2); }
 .startup-icon-missing { background: rgba(198, 40, 40, 0.22); }
 .startup-icon-na { background: rgba(69, 90, 100, 0.3); }
+.startup-icon-skipped { background: rgba(120, 144, 156, 0.18); }
+.startup-g-skipped { border-left-color: #90a4ae !important; border-left-style: dashed !important; }
 .startup-body {
 	-webkit-overflow-scrolling: touch;
 }
@@ -780,6 +828,8 @@ export default {
 .startup-text-example { color: var(--wf-n-down-text); }
 .startup-text-missing { color: #b71c1c; }
 .startup-text-na { color: #455a64; }
+.startup-text-skipped { color: #546e7a; }
+.startup-state-skipped { color: #546e7a !important; border-color: #78909c !important; }
 .startup-state-configured { color: #1b5e20 !important; border-color: #1b5e20 !important; }
 .startup-state-example { color: var(--wf-n-down-text) !important; border-color: var(--wf-n-down) !important; }
 .startup-state-missing { color: #b71c1c !important; border-color: #b71c1c !important; }
@@ -789,6 +839,7 @@ export default {
 .theme--dark .startup-text-configured, .theme--dark .startup-state-configured { color: #a5d6a7 !important; border-color: #a5d6a7 !important; }
 .theme--dark .startup-text-missing, .theme--dark .startup-state-missing { color: #ef9a9a !important; border-color: #ef9a9a !important; }
 .theme--dark .startup-text-na, .theme--dark .startup-state-na { color: #b0bec5 !important; border-color: #b0bec5 !important; }
+.theme--dark .startup-text-skipped, .theme--dark .startup-state-skipped { color: #b0bec5 !important; border-color: #90a4ae !important; }
 .startup-path {
 	display: inline-block;
 	max-width: 100%;

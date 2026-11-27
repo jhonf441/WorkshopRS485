@@ -2,14 +2,17 @@
 	<div class="detail-chart-wrap" :style="{ height: height + 'px' }">
 		<div v-if="unit" class="detail-chart-unit">{{ unit }}</div>
 		<canvas ref="canvas"></canvas>
-		<button
-			v-if="isZoomed" type="button" class="detail-chart-reset"
-			:title="ts('chart_reset_zoom_title')" @click="resetZoom"
-		><v-icon x-small class="mr-1">mdi-magnify-minus-outline</v-icon>{{ ts('chart_reset_zoom') }}</button>
-		<button
-			v-if="isTimed" type="button" class="detail-chart-scale"
-			:title="scaleTitles[scaleMode]" @click="cycleScale"
-		>{{ scaleLabels[scaleMode] }}</button>
+		<!-- the tools live in the top row (the plot leaves room for it, see layout.padding.top): the scale chip never covers the axes or the zero -->
+		<div v-if="isZoomed || isTimed" class="detail-chart-tools">
+			<button
+				v-if="isZoomed" type="button" class="detail-chart-reset"
+				:title="ts('chart_reset_zoom_title')" @click="resetZoom"
+			><v-icon x-small class="mr-1">mdi-magnify-minus-outline</v-icon>{{ ts('chart_reset_zoom') }}</button>
+			<button
+				v-if="isTimed" type="button" class="detail-chart-scale"
+				:title="scaleTitles[scaleMode]" @click="cycleScale"
+			>{{ scaleLabels[scaleMode] }}</button>
+		</div>
 		<div v-if="history.length < 2" class="detail-chart-nodata">{{ ts('chart_waiting') }}</div>
 		<div v-if="wheelHint" class="detail-chart-hint">{{ ts('chart_wheel_hint') }}</div>
 	</div>
@@ -23,7 +26,7 @@ import Chart from 'chart.js'
 import { zoomPlugins } from './zoom-plugin.js' // the zoom plugin only for the charts of this component (see zoom-plugin.js)
 import Hammer from 'hammerjs'
 import { ts } from './shared-t.js'
-import { withGaps, timeRange, formatValue, linearRange } from './chart-data.js'
+import { withGaps, timeRange, formatValue, linearRange, axisStepSeconds, axisAgoLabel } from './chart-data.js'
 
 // chartjs-plugin-zoom 0.7.x looks for the Hammer constructor in the global
 // -- without this, touch pan/zoom (kiosk screen) does not
@@ -181,7 +184,8 @@ export default {
 		// Ctrl+wheel (and the touchpad pinch, which arrives the same) is Chrome's
 		// zoom: cut it before it reaches the chart's zoom plugin,
 		// which consumed it with preventDefault and the page did not scale.
-		this.$el.addEventListener('wheel', this.onCtrlWheel, true);
+		// passive: it only stops the event (never preventDefault), so scrolling never waits for it (Chrome's scroll-blocking warning, 2026-11-23)
+		this.$el.addEventListener('wheel', this.onCtrlWheel, { capture: true, passive: true });
 		this.$el.addEventListener('mousedown', this.onEngage);
 		this.$el.addEventListener('touchstart', this.onEngage, { passive: true });
 		this.$el.addEventListener('mouseleave', this.onRelease);
@@ -336,7 +340,8 @@ export default {
 			// (chart-data.js niceCeil). 2026-10-21: zeroBased false fits the axis to the data (linearRange).
 			const range = linearRange(ys.filter(v => v !== null), this.zeroBased);
 			yTicks.min = range.min;
-			yTicks.max = range.max;
+			// a percentage that never passes 100 stops at 100: a nice top of 110 put its label on top of the 100 one (PiHealth CPU, 2026-11-24)
+			yTicks.max = this.unit === '%' && maxY <= 100 && range.max > 100 ? 100 : range.max;
 		},
 		// BUG found 2026-10-07 ("when zooming the time axis
 		// shows many things, it creates noise"): the X axis is "linear" type
@@ -384,26 +389,11 @@ export default {
 				return;
 			}
 			const rangeS = (maxT - minT) / 1000;
-			// Adapted 2026-10-08 ("since the X axis is so small not that many
-			// labels fit, when you detect it is going to overflow reduce the
-			// number"): before the target of 7 ticks was fixed, without looking at
-			// the real width of the chart -- in Motors' narrow charts (~500px)
-			// that is enough to squeeze the labels. Now
-			// it is computed how many labels fit according to the real width of the
-			// chart area (chartArea, available after the first
-			// layout), with ~48px per compact label of the "-1:23" kind.
+			// how many labels fit in the real width of the chart, and the nice step that gives them (chart-data.js axisStepSeconds; 2026-10-08, 2026-11-24)
 			const axisWidth = ci.chartArea ? (ci.chartArea.right - ci.chartArea.left) : 300;
-			const maxFit = Math.max(2, Math.floor(axisWidth / 48));
-			const target = Math.min(7, maxFit);
-			const stepsS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 43200, 86400];
-			let stepS = stepsS[stepsS.length - 1];
-			for (const s of stepsS) {
-				if (rangeS / s <= target) {
-					stepS = s;
-					break;
-				}
-			}
+			const stepS = axisStepSeconds(rangeS, axisWidth);
 			xTicks.stepSize = stepS * 1000;
+			this.xStepS = stepS;
 		},
 		// "125" -> "2:05", "45" -> "45s" -- compact format for the X axis,
 		// which otherwise looks ugly as soon as the history exceeds 60 samples
@@ -447,7 +437,8 @@ export default {
 		// character.
 		formatAgoMsAxis(epochMs) {
 			const deltaS = Math.round((Date.now() - epochMs) / 1000);
-			return deltaS >= 0 ? `-${this.formatSeconds(deltaS)}` : `+${this.formatSeconds(-deltaS)}`;
+			const text = axisAgoLabel(Math.abs(deltaS), this.xStepS || 0, t => this.formatSeconds(t));
+			return deltaS >= 0 ? `-${text}` : `+${text}`;
 		},
 		// "24000" -> "24k" -- so that the big numbers of the Y axis
 		// (Hz, mm/min) do not look like an illegible block of digits.
@@ -521,7 +512,7 @@ export default {
 				type: 'linear',
 				gridLines: { color: 'rgba(128,128,128,0.15)', zeroLineColor: 'rgba(128,128,128,0.25)' },
 				ticks: {
-					fontSize: 9, fontColor: '#888888',
+					fontSize: 12, fontColor: '#888888',
 					// maxRotation AND minRotation at 0 (2026-10-08, "the X axes
 					// keep going diagonal"): with only maxRotation:0
 					// Chart.js in theory should no longer rotate anything, but setting
@@ -533,7 +524,7 @@ export default {
 			} : {
 				gridLines: { color: 'rgba(128,128,128,0.15)', zeroLineColor: 'rgba(128,128,128,0.25)' },
 				ticks: {
-					fontSize: 9, fontColor: '#888888',
+					fontSize: 12, fontColor: '#888888',
 					maxTicksLimit: 8, autoSkip: true, maxRotation: 0, minRotation: 0
 				}
 			};
@@ -543,7 +534,7 @@ export default {
 				gridLines: { color: 'rgba(128,128,128,0.15)', zeroLineColor: 'rgba(128,128,128,0.25)' },
 				ticks: {
 					beginAtZero: !isLog,
-					fontSize: 9, fontColor: '#888888',
+					fontSize: 12, fontColor: '#888888',
 					maxTicksLimit: 5,
 					// 2026-10-08: the unit is NO LONGER repeated on each
 					// label (see .detail-chart-unit in the template,
@@ -573,7 +564,7 @@ export default {
 				legend: {
 					display: this.legend,
 					position: 'top',
-					labels: { boxWidth: 12, fontSize: 10, fontColor: '#888888' }
+					labels: { boxWidth: 12, fontSize: 12, fontColor: '#888888' }
 				},
 				tooltips: {
 					mode: 'index',
@@ -826,7 +817,7 @@ export default {
 	top: 2px;
 	left: 4px;
 	z-index: 2;
-	font-size: 10px;
+	font-size: 12px;
 	color: var(--tp-faint, #9e9e9e);
 	opacity: 0.85;
 	pointer-events: none;
@@ -837,16 +828,22 @@ export default {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 11px;
+	font-size: 12px;
 	opacity: 0.5;
 	pointer-events: none;
 }
-.detail-chart-reset {
+.detail-chart-tools {
 	position: absolute;
 	top: 2px;
 	right: 2px;
 	z-index: 2;
-	font-size: 10px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.detail-chart-reset {
+	position: relative;
+	font-size: 12px;
 	padding: 2px 8px;
 	border-radius: 10px;
 	border: 1px solid rgba(128,128,128,0.4);
@@ -855,18 +852,29 @@ export default {
 	cursor: pointer;
 }
 .detail-chart-scale {
-	position: absolute;
-	bottom: 2px;
-	left: 2px;
-	z-index: 2;
-	font-size: 9px;
-	padding: 1px 6px;
-	border-radius: 8px;
-	border: 1px solid rgba(128,128,128,0.4);
-	background: rgba(32,32,32,0.75);
-	color: #cfd8dc;
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--wf-size-xs, 24px);
+	font-size: 12px;
+	font-weight: 500;
+	padding: 0 8px;
+	border-radius: 999px;
+	border: 1px solid var(--wf-control-line, #8c8c8c);
+	background: transparent;
+	color: inherit;
 	cursor: pointer;
-	opacity: 0.85;
+}
+/* 40 px clickable area (the scale): the visible chip stays small, the hit area grows around it without leaving the chart */
+.detail-chart-scale::after,
+.detail-chart-reset::after {
+	content: '';
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: max(100%, var(--wf-hit, 40px));
+	height: var(--wf-hit, 40px);
+	transform: translate(-50%, -50%);
 }
 .detail-chart-hint {
 	position: absolute;
@@ -874,13 +882,16 @@ export default {
 	top: 40%;
 	transform: translateX(-50%);
 	z-index: 3;
-	font-size: 11px;
+	font-size: 12px;
 	padding: 4px 10px;
 	border-radius: 6px;
 	background: rgba(32, 32, 32, 0.85);
 	color: #eceff1;
 	pointer-events: none;
-	white-space: nowrap;
+	/* wraps inside the chart: a nowrap hint wider than a narrow chart (390 px with the control bar) pushed the page sideways */
+	width: max-content;
+	max-width: calc(100% - 16px);
+	text-align: center;
 }
 .detail-chart-reset:hover {
 	background: rgba(64,64,64,0.9);

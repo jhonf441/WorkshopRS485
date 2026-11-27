@@ -1,0 +1,10 @@
+{
+ "version": 1,
+ "plugin": "WorkshopRS485",
+ "macros": [
+  {
+   "file": "system/rs485-read.g",
+   "audience": "internal"
+  }
+ ]
+}

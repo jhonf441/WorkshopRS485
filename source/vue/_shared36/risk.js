@@ -20,8 +20,8 @@ function askInPage(opts) {
 		box.setAttribute('aria-modal', 'true')
 		box.setAttribute('aria-label', String(opts.title))
 		const row = el('div', 'display:flex;gap:8px;justify-content:flex-end;margin-top:12px;')
-		const cancel = el('button', 'background:#455a64;color:#fff;border:0;border-radius:6px;padding:8px 14px;min-height:44px;font-size:14px;cursor:pointer;', ts('risk_cancel'))
-		const ok = el('button', 'background:#bf360c;color:#fff;border:0;border-radius:6px;padding:8px 14px;min-height:44px;font-size:14px;font-weight:600;cursor:pointer;', ts('risk_continue'))
+		const cancel = el('button', 'background:#455a64;color:#fff;border:0;border-radius:6px;padding:8px 14px;min-height:var(--wf-hit, 40px);font-size:14px;cursor:pointer;', ts('risk_cancel'))
+		const ok = el('button', 'background:#bf360c;color:#fff;border:0;border-radius:6px;padding:8px 14px;min-height:var(--wf-hit-critical, 48px);font-size:14px;font-weight:600;cursor:pointer;', ts('risk_continue'))
 		cancel.type = ok.type = 'button'
 		const end = value => {
 			document.removeEventListener('keydown', key, true)

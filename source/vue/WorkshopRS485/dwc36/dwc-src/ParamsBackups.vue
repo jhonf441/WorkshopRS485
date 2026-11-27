@@ -4,7 +4,8 @@
 			<v-btn small outlined v-bind="attrs" v-on="on" @click="loadBackups()"><v-icon small left>mdi-content-save-cog</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.backups') }}</v-btn>
 		</template>
 		<v-card class="pa-3">
-			<div class="text-subtitle-2 d-flex align-center">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}<help-tip :title="ht('backups_title')" :what="ht('backups_what')" :why="ht('backups_why')" :how="ht('backups_how')" /></div>
+			<div class="text-subtitle-2 d-flex align-center">{{ $t('plugins.WorkshopRS485.paramsT3d.save_what_was_read_to_the') }}</div>
+				<help-fold class="mt-1" :items="[{ title: ht('backups_title'), what: ht('backups_what'), why: ht('backups_why'), how: ht('backups_how') }]" />
 			<div class="d-flex align-center mt-1" style="gap:6px">
 				<v-text-field v-model.trim="noteBackup" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.note_optional_e_g_before_tuning')" dense outlined hide-details />
 				<v-btn small color="primary" :disabled="!hasReading || reading || !can('rs485.backup_save')" :loading="savingBackup" @click="saveBackup()">{{ $t('plugins.WorkshopRS485.common.save') }}</v-btn>
@@ -17,14 +18,15 @@
 					<div class="text-body-2">{{ (r.date || '').replace('T', ' ') }}<span v-if="r.note" class="grey--text"> &middot; {{ r.note }}</span></div>
 					<div class="text-caption grey--text">{{ r.error ? r.error : $t('plugins.WorkshopRS485.paramsT3d.n_registers', { n: r.amount }) }}</div>
 				</div>
-				<v-btn x-small text :disabled="!!r.error" @click="compareWith(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.compare') }}</v-btn>
-				<v-btn x-small text :disabled="!!r.error" @click="restore(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.restore') }}</v-btn>
-				<v-btn :aria-label="$t('plugins.WorkshopRS485.shared.aria_delete')" x-small icon :disabled="!can('rs485.backup_delete')" :color="armedDelete === r.name ? 'error' : ''" @click="touchDeleteBackup(r)"><v-icon x-small>mdi-delete</v-icon></v-btn>
+				<v-btn small text :disabled="!!r.error" @click="compareWith(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.compare') }}</v-btn>
+				<v-btn small text :disabled="!!r.error" @click="restore(r)">{{ $t('plugins.WorkshopRS485.paramsT3d.restore') }}</v-btn>
+				<!-- deleting is a write of the family (workshop-action.js): a double touch (4000 ms), one request; a refusal goes to the message line of the page -->
+				<wf-action-button :action="deleteAction(r.name)" :label="$t('plugins.WorkshopRS485.shared.aria_delete')" :arm-label="tp('tap_again_to_delete')" danger :disabled="!can('rs485.backup_delete')" @run="deleteAction(r.name).run({ name: r.name })" />
 			</div>
 			<v-divider class="my-2" />
 			<div class="d-flex flex-wrap" style="gap:6px">
-				<v-btn x-small text :disabled="!hasReading" @click="downloadBackup()"><v-icon x-small left>mdi-download</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.download_json') }}</v-btn>
-				<v-btn x-small text @click="loadFile()"><v-icon x-small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.load_json_as_changes') }}</v-btn>
+				<v-btn small text :disabled="!hasReading" @click="downloadBackup()"><v-icon small left>mdi-download</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.download_json') }}</v-btn>
+				<v-btn small text @click="loadFile()"><v-icon small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.load_json_as_changes') }}</v-btn>
 			</div>
 		</v-card>
 	</v-menu>
@@ -41,8 +43,10 @@ import { failureOf } from './session-refusal.js' // a failed call as the error i
 import { exchangeExportJson, exchangeImport } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { backupData, exportBackup, importBackup, isBackup } from './params-backup.js'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 import LockReason from './LockReason.vue' // vue/_shared36
+import WfActionButton from './WfActionButton.vue' // vue/_shared36 (FASE2)
+import { createAction } from './workshop-action.js' // vue/_shared36 (FASE2)
 
 // The backups of the parameters of one T3D servo: the ones the service keeps on the SD (save, compare, restore, delete) and the file of the
 // exchange standard (download, load with a preview). Loading or restoring does not write to the servo: the page puts the values in its list of
@@ -50,7 +54,7 @@ import LockReason from './LockReason.vue' // vue/_shared36
 export default { mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['backups', 'noteBackup'],
-	components: { LockReason, HelpTip },
+	components: { HelpFold, LockReason, WfActionButton },
 	props: {
 		dispId: { type: String, required: true },
 		values: { type: Object, required: true }, // what was read: { "<register>": { value } | { error } }
@@ -61,10 +65,13 @@ export default { mixins: [canMixin],
 		reading: Boolean
 	},
 	data() {
-		return { menuBackup: false, backups: [], noteBackup: '', savingBackup: false, armedDelete: null, armedTimer: null };
+		return { menuBackup: false, backups: [], noteBackup: '', savingBackup: false };
+	},
+	created() {
+		this.deleteActions = {}; // one write per backup, made when first drawn (not reactive: each action is)
 	},
 	beforeDestroy() {
-		clearTimeout(this.armedTimer);
+		Object.keys(this.deleteActions).forEach(k => this.deleteActions[k].dispose());
 	},
 	methods: {
 		ht(k) {
@@ -124,17 +131,18 @@ export default { mixins: [canMixin],
 				this.say(failureOf(e, m => this.tp('could_not_read_the_backup') + m, () => i18n.t('plugins.WorkshopRS485.common.act_backups')), true);
 			}
 		},
-		touchDeleteBackup(r) {
-			if (this.armedDelete !== r.name) {
-				this.armedDelete = r.name;
-				clearTimeout(this.armedTimer);
-				this.armedTimer = setTimeout(() => { this.armedDelete = null; }, 4000);
-				return;
+		deleteAction(name) {
+			if (!this.deleteActions[name]) {
+				this.deleteActions[name] = createAction({
+					arm: 'double',
+					run: args => callService(this.sendCode, { P: 'backup_delete', N: args.name }).catch(e => {
+						this.say(failureOf(e, m => this.tp('could_not_delete', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_delete_backup')), true);
+						throw e;
+					}),
+					after: () => this.loadBackups()
+				});
 			}
-			this.armedDelete = null;
-			callService(this.sendCode, { P: 'backup_delete', N: r.name }).then(() => this.loadBackups()).catch(e => {
-				this.say(failureOf(e, m => this.tp('could_not_delete', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_delete_backup')), true);
-			});
+			return this.deleteActions[name];
 		},
 		// the parameters read as a file of the exchange standard (envelope workshop-rs485-servo-params)
 		downloadBackup() {

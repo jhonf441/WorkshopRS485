@@ -1,5 +1,41 @@
 # WorkshopRS485 -- historial de versiones
 
+## 2.9.0 -- 2026-11-23
+
+- Family scale (FAMILIA-REDISENO tanda 4): every x-small button (about 40) and the icons inside them go to 32 / 16; data chips stay at 24; the touch area is the family 40.
+
+## 2.8.2 -- 2026-11-23
+
+- optional files are never requested when absent
+
+## 2.8.1 -- 2026-11-23
+
+- select arrows, one focus ring per field, shared family stylesheet split
+
+## 2.8.0 -- 2026-11-22
+
+- Neutral chips with a status dot and readable labels
+
+## 2.7.3 -- 2026-11-22
+
+- Rebuild with shared update: start-up card split into modules, neutral Spanish texts, service texts resynced, unused .wf-index rule dropped
+
+## 2.7.2 -- 2026-11-22
+
+- Tuteo in texts (no voseo in es.json).
+
+## 2.7.1 -- 2026-11-22
+
+- Visual review round: single hover and focus for inputs and controls (family styles), 44 px switch and checkbox rows, range picker field 44 px.
+
+## 2.7.0 -- 2026-11-21
+
+- Style unification: history, backups, EEPROM and profile double-touch writes use the family write state and button with one 4000 ms constant, help popovers become one fold per block, nothing under 12 px, 44 px controls.
+
+## 2.6.39 -- 2026-11-21
+
+- Help card readable (own text color and font), one session notice per page, no repeated asks for missing optional files; Jog pendant press feedback and tap-again confirmations; Vision silent on closed connection
+
 ## 2.6.38 -- 2026-11-18
 
 - accessRev: the page asks whoami at once when the service says the access changed
@@ -38,7 +74,7 @@
 
 ## 2.6.29 -- 2026-11-11
 
-- Owner report 2026-11-11: shutdown without session, kiosk PIN pad, hive confirm color, wheel release and Z keys, version in every page bar
+- User report 2026-11-11: shutdown without session, kiosk PIN pad, hive confirm color, wheel release and Z keys, version in every page bar
 
 ## 2.6.28 -- 2026-11-10
 

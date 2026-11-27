@@ -36,12 +36,12 @@
  "detection_bus_address": "{bus}: dirección {address}",
  "detection_done_no_new_device": "Listo: no apareció ningún equipo nuevo.",
  "detection_done_unconfigured_devices_found": "Listo: {n} equipo(s) sin configurar encontrados.",
- "detection_new_device_added_by_itself": "equipo nuevo agregado solo: {name} en {bus} ({format}), sin eje. Revisalo en la página RS485.",
+ "detection_new_device_added_by_itself": "equipo nuevo agregado solo: {name} en {bus} ({format}), sin eje. Revísalo en la página RS485.",
  "detection_p_181_matches_the_address": "P-181 coincide con la dirección",
  "detection_that_adapter_is_not_free": "ese adaptador no está libre (ya lo usa un bus) o no está conectado",
  "detection_that_device_is_no_longer_detected": "ese equipo ya no está en la lista de detectados",
  "detection_there_is_already_a_device_at": "ya hay un dispositivo en esa dirección",
- "diagnosis_a_sweep_is_already_running": "ya hay un barrido en curso: cancelalo o espera que termine",
+ "diagnosis_a_sweep_is_already_running": "ya hay un barrido en curso: cancélalo o espera que termine",
  "diagnosis_format_address": "{format}, dirección {address}",
  "generic_alarm_not_in_the_profile_table": "alarma {code} (no está en la tabla del perfil)",
  "generic_alarm_text": "alarma {code}: {text}",
@@ -115,7 +115,7 @@
  "profiles_fault_emergency_stop_axis_moving": "{text} -- PARADA DE EMERGENCIA (el eje {axis} se estaba moviendo)",
  "profiles_fault_emergency_stop_live_job": "{text} -- PARADA DE EMERGENCIA (trabajo en vivo)",
  "profiles_fault_job_paused": "{text} -- trabajo pausado",
- "profiles_fault_live_job_cannot_be_paused": "{text} -- trabajo en vivo: no se puede pausar desde la máquina, pausalo en el programa que lo envía",
+ "profiles_fault_live_job_cannot_be_paused": "{text} -- trabajo en vivo: no se puede pausar desde la máquina, páusalo en el programa que lo envía",
  "profiles_fault_moves_no_axis": "{text} (no mueve ningún eje: solo aviso)",
  "profiles_no_rs485_communication": "sin comunicación RS485 ({error})",
  "t3d_alarm_how_it_clears": "Err{code} ({name}): {how}",
@@ -666,5 +666,7 @@
  "t3d_torque_over_the_limit": "torque {torque}% supera el límite {limit}% (posible atasco)",
  "t3d_unit_0_01_turns": "0.01 vueltas",
  "t3d_unit_degrees": "grados",
- "t3d_unit_pulses": "pulsos"
+ "t3d_unit_pulses": "pulsos",
+ "workshop_api_process_title": "API del servicio (HTTP)",
+ "workshop_api_process_description": "Punto de entrada HTTP de la API del servicio en DSF; se reconecta solo si DSF lo pierde."
 }

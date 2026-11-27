@@ -8,16 +8,17 @@
 	     - session: "Sign in" when the service has people and this browser has no session (so a page does not say the service
 	       "does not respond" when it only needs you to sign in); "Read only" for a visitor.
 	     - no action buttons here: what a section needs goes in the section. -->
-	<div class="page-header wf-bar" :class="{ 'page-header--compact': compact }" :style="barStyle">
+	<div class="page-header-wrap">
+	<div class="page-header wf-bar" :style="barStyle">
 		<span class="wf-badge" aria-hidden="true"><v-icon class="wf-badge-icon">{{ icon }}</v-icon></span>
 		<div class="wf-bar-txt">
-			<div class="page-title wf-title" role="heading" aria-level="1">{{ title }}</div>
+			<div class="page-title wf-title" role="heading" aria-level="1" :title="title">{{ title }}</div>
 			<div v-if="leadText" class="wf-lead" :title="leadText">{{ leadText }}</div>
 		</div>
 		<div class="wf-bar-right">
 				<v-menu v-if="!loading && !signedOutNow && !resolvingNow" offset-y :close-on-content-click="false" :disabled="level === 'ok'">
 					<template v-slot:activator="{ on, attrs }">
-						<v-chip small outlined :color="ui.color" class="page-health" v-bind="attrs" v-on="on">
+						<v-chip small outlined :color="ui.color" class="page-health" :data-wf-hit="level !== 'ok' ? '1' : null" v-bind="attrs" v-on="on">
 							{{ ts(ui.key) }}<template v-if="all.length">: {{ all.length }}</template>
 						</v-chip>
 					</template>
@@ -34,6 +35,7 @@
 				<session-notice variant="chip" />
 				<slot name="startup" />
 		</div>
+	</div>
 	</div>
 </template>
 
@@ -69,9 +71,7 @@ export default {
 		// [{ level: 'warn' | 'error', text }] the page watches; null / [] = fine
 		reasons: { type: Array, default: () => [] },
 		// the page has no data yet: no health chip (a green "all fine" before knowing would be a lie)
-		loading: { type: Boolean, default: false },
-		// a lower bar: less padding, a smaller badge and the lead line on ONE line (the pages that sit under DWC's own panels and need the room)
-		compact: { type: Boolean, default: false }
+		loading: { type: Boolean, default: false }
 	},
 	computed: {
 		// signed out: the page's errors come from the missing session, not from a failure
@@ -119,19 +119,15 @@ export default {
 }
 </script>
 
-<style>
-/* compact bar: structure only (sizes and colors are design/family.css). The lead never wraps, it is cut with an ellipsis (its text is also the title of the line) */
-.page-header.page-header--compact { gap: 8px 10px; margin-bottom: 6px; padding: 6px 12px; }
-.page-header--compact .wf-badge { width: 28px; height: 28px; }
-.page-header--compact .wf-lead { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-</style>
-
 <style scoped>
+/* Interactive when the health is not "ok" (it opens the list of reasons): the 24 px chip is touched over 44 px (family [data-wf-hit]::after);
+   Vuetify clips the chip, so the clip is lifted. At "ok" the chip is informational (the menu is disabled) and has no hit area. */
 .page-health {
 	cursor: pointer;
 }
+.page-health[data-wf-hit] { overflow: visible; }
 .page-version {
-	font-size: 11px;
+	font-size: 12px;
 	opacity: 0.6;
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;

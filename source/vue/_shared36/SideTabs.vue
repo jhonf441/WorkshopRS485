@@ -1,5 +1,24 @@
 <template>
 	<nav class="sidetabs" :class="{ 'st-collapsed': collapsed }" role="tablist" aria-orientation="vertical" :aria-label="ts('sidebar_label')" @keydown="move">
+		<!-- narrow container (< 640 px, a phone): ONE 44 px button "Section: X" that opens the whole list in a sheet, the same form as the service page
+		     (SvSectionNav, owner 2026-11-23, note 17); the rail and the row are the other two forms of the same entries -->
+		<button type="button" class="st-pick" aria-haspopup="dialog" :aria-expanded="picking ? 'true' : 'false'" @click="picking = true">
+			<v-icon small class="st-pick-icon" aria-hidden="true">mdi-menu</v-icon>
+			<small class="st-pick-word">{{ ts('sidebar_section') }}</small>
+			<b class="st-pick-name">{{ currentLabel }}</b>
+		</button>
+		<wf-sheet :open="picking" :title="ts('sidebar_section')" @close="picking = false">
+			<div class="st-sheet" role="list">
+				<template v-for="(it, i) in items">
+					<div v-if="it.group && (i === 0 || items[i - 1].group !== it.group)" :key="'sg' + i" class="st-sheet-group">{{ it.group }}</div>
+					<button :key="'si' + i" type="button" role="listitem" class="st-sheet-item" :class="{ 'st-sheet-on': value === key(it, i) }" :aria-current="value === key(it, i) ? 'page' : null" :disabled="it.disabled" :title="lockHint(it)" @click="choose(it, i)">
+						<v-icon :size="18" aria-hidden="true">{{ it.icon || (out ? 'mdi-account-lock-outline' : 'mdi-lock-outline') }}</v-icon>
+						<span class="st-sheet-text"><span>{{ it.label }}</span><small v-if="it.locked">{{ out ? ts('sidebar_needs_session') : roleName(it.locked) }}</small></span>
+						<span v-if="it.badge" class="st-badge">{{ it.badge }}</span>
+					</button>
+				</template>
+			</div>
+		</wf-sheet>
 		<div class="st-head">
 			<button v-if="!collapsed" type="button" class="st-fold st-pin" :class="{ 'st-pinned': pinned }" :aria-pressed="pinned ? 'true' : 'false'" :title="ts(pinned ? 'sidebar_unpin' : 'sidebar_pin')" @click.stop="togglePin">
 				<v-icon small>{{ pinned ? 'mdi-pin' : 'mdi-pin-outline' }}</v-icon><span class="st-pin-label">{{ ts('sidebar_pin_label') }}</span>
@@ -10,7 +29,7 @@
 		</div>
 		<div class="st-scroll">
 			<template v-for="(it, i) in items">
-			<div v-if="it.group && (i === 0 || items[i - 1].group !== it.group)" :key="'g' + i" class="st-group" :data-group="indexGroup(it.group)">{{ it.group }}</div>
+			<div v-if="it.group && (i === 0 || items[i - 1].group !== it.group)" :key="'g' + i" class="st-group" :data-group="indexGroup(it.group)" :title="collapsed ? it.group : null" :aria-label="it.group">{{ it.group }}</div>
 			<button
 				:key="'i' + i"
 				type="button"
@@ -53,6 +72,7 @@ import { ts } from './shared-t.js';
 import { roleLabel } from './notice-kind.js';
 import { signedOut } from './workshop-auth.js';
 import { roleMixin } from './role-mixin.js';
+import WfSheet from './WfSheet.vue';
 
 const PIN_KEY = 'workshopSideTabsPinned:';
 
@@ -67,13 +87,14 @@ function pinStore(write) {
 
 export default {
 	name: 'SideTabs',
+	components: { WfSheet },
 	mixins: [roleMixin],
 	props: {
 		items: { type: Array, required: true },
 		value: { default: 0 },
 	},
 	data() {
-		return { collapsed: false, pinned: pinStore() };
+		return { collapsed: false, pinned: pinStore(), picking: false };
 	},
 	mounted() {
 		this.revealActive();
@@ -89,6 +110,11 @@ export default {
 		out() {
 			void this.identityTick; // the session changes while the bar is on screen (sign in, sign out, a role change): without this the value was frozen at the first draw
 			return signedOut();
+		},
+		// the name on the narrow picker: the chosen section
+		currentLabel() {
+			const it = this.items.find((x, i) => this.key(x, i) === this.value);
+			return it ? it.label : '';
 		},
 		tabbable() {
 			const chosen = this.items.findIndex((it, i) => this.key(it, i) === this.value && !it.disabled);
@@ -158,6 +184,7 @@ export default {
 			this.holdHeight();
 			this.$emit('input', this.key(it, i));
 			this.showTop();
+			this.picking = false;
 			if (!this.pinned) this.collapsed = true;
 		},
 	},
@@ -166,13 +193,15 @@ export default {
 
 <style>
 /* STRUCTURE only (layout, widths, folding, wrapping). The look (colors, text, lines, hover, active mark) is design/family.css. */
-.st-layout { display: flex; gap: 14px; align-items: flex-start; }
-.st-body { flex: 1 1 auto; min-width: 0; }
+/* FASE4: the layout is a size container (named wf-sidetabs): the bar is a rail at 900 px of container or more and a row under it, whatever the window
+ * (DWC's own panels take width, so the width of the window says nothing). The row wraps: the bar takes the whole line and the body goes under it. */
+.st-layout { display: flex; flex-wrap: wrap; align-content: flex-start; column-gap: 14px; row-gap: 8px; align-items: flex-start; container: wf-sidetabs / inline-size; } /* align-content: the held min-height (holdHeight) never opens a gap between the narrow picker and the card */
+.st-body { flex: 1 1 0; min-width: 0; }
 /* sticky and taller than the window (Machine has 16 items): it scrolls inside, so the last ones can always be reached */
 .sidetabs { position: sticky; top: 64px; flex: none; width: 190px; display: flex; flex-direction: column; padding: 0 4px 8px 0; max-height: calc(100vh - 80px); overflow: hidden; }
 /* the head (pin and fold arrow) stays on screen: only the items scroll, inside .st-scroll */
 .sidetabs .st-head { flex: none; }
-.sidetabs .st-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sidetabs .st-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 0; } /* 4 px inside the scroll box: the 40 px area of the first and the last entry is not clipped by it (ux 2026-11-24: "Resumen" measured 32) */
 /* the scrollbar of the bar is the thin one of the Jog (4 px, no track) and none at all on a touch screen; its colour is family.css.
  * scrollbar-width: auto (!important) on purpose: any copy of this bar that still says `thin` (every plugin bundles its own CSS and all of them are
  * loaded in the same page) would make Chromium ignore ::-webkit-scrollbar. */
@@ -183,13 +212,13 @@ export default {
 .sidetabs.st-collapsed { width: 52px; }
 .sidetabs .st-head { display: flex; align-items: center; justify-content: space-between; }
 .sidetabs.st-collapsed .st-head { flex-direction: column-reverse; justify-content: center; }
-.sidetabs .st-pin { width: auto; min-width: 32px; padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; }
+.sidetabs .st-pin { position: relative; width: auto; min-width: var(--wf-size-s, 32px); min-height: var(--wf-size-s, 32px); padding: 0 8px; display: inline-flex; align-items: center; gap: 4px; }
 .sidetabs .st-pin-label { white-space: nowrap; }
-.sidetabs.st-collapsed .st-pin { width: 32px; padding: 0; justify-content: center; }
-.sidetabs .st-fold { align-self: flex-end; height: 32px; width: 32px; border: none; background: transparent; color: inherit; cursor: pointer; }
+.sidetabs.st-collapsed .st-pin { width: var(--wf-size-s, 32px); padding: 0; justify-content: center; }
+.sidetabs .st-fold { position: relative; align-self: flex-end; height: var(--wf-size-s, 32px); width: var(--wf-size-s, 32px); margin: 4px; border: none; background: transparent; color: inherit; cursor: pointer; }
 .sidetabs.st-collapsed .st-fold { align-self: center; }
 .sidetabs .st-group { padding: 12px 12px 4px; }
-.sidetabs .st-item { display: flex; align-items: center; gap: 10px; min-height: 40px; width: 100%; padding: 6px 12px; border: none; border-left: 2px solid transparent; font: inherit; text-align: left; cursor: pointer; }
+.sidetabs .st-item { display: flex; align-items: center; gap: 10px; min-height: var(--wf-size-s, 32px); width: 100%; margin: 0; padding: 4px 12px; border: none; border-left: 2px solid transparent; font: inherit; text-align: left; cursor: pointer; }
 .sidetabs .st-item.st-off { cursor: not-allowed; }
 .sidetabs .st-icon { flex: none; }
 /* the icon of the section (always the real one; a locked section gets a small lock on its corner) and the text column: the name, and below it who may open it */
@@ -203,11 +232,14 @@ export default {
 .sidetabs.st-collapsed .st-text, .sidetabs.st-collapsed .st-badge { display: none; }
 .sidetabs.st-collapsed .st-item { justify-content: center; padding: 6px 0; }
 /* the name of the group stays readable when folded (short, small): "Operate" / "Configure" */
-.sidetabs.st-collapsed .st-group { line-height: 1.1; padding: 8px 2px 2px; margin: 4px 0 0 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 900px) {
-	.st-layout { flex-direction: column; gap: 8px; align-items: stretch; }
-	.st-body { width: 100%; }
-	.sidetabs, .sidetabs.st-collapsed { position: static; max-height: none; overflow: visible; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
+/* folded (52 px): a group is only a divider, its name in title and aria-label (a cut "Dina..." said nothing) */
+.sidetabs.st-collapsed .st-group { height: 0; padding: 0; margin: 8px 6px; overflow: hidden; white-space: nowrap; }
+/* 8 px between two entries that follow each other (not margins on both sides: they collapse), so the 40 px areas meet and never overlap */
+.sidetabs .st-item + .st-item { margin-top: 8px; }
+.sidetabs .st-group + .st-item { margin-top: 4px; }
+@container wf-sidetabs (max-width: 899.98px) {
+	.st-body { flex-basis: 100%; }
+	.sidetabs, .sidetabs.st-collapsed { flex: 0 0 100%; position: static; max-height: none; overflow: visible; width: 100%; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom-width: 1px; border-bottom-style: solid; padding: 0 0 4px; }
 	.sidetabs .st-fold { display: none; }
 	.sidetabs .st-scroll { display: contents; }
 	/* in the row layout the group name goes before its tabs, so "Configure" is still there */
@@ -215,4 +247,20 @@ export default {
 	.sidetabs .st-item, .sidetabs.st-collapsed .st-item { width: auto; flex: none; border-left: none; border-bottom: 2px solid transparent; justify-content: flex-start; padding: 6px 12px; }
 	.sidetabs.st-collapsed .st-text { display: flex; }
 }
+/* the scale (2026-11-23): entries 32 px seen with 4 px above and below, so each one is touched over 40 px (the ::after of family-plugins.css) without
+ * reaching its neighbour; pin and fold 32 with the same 40 px area */
+.sidetabs :is(.st-fold, .st-pin)::after, .st-sheet-item::after { content: ''; position: absolute; left: 50%; top: 50%; width: max(100%, var(--wf-hit, 40px)); height: max(100%, var(--wf-hit, 40px)); transform: translate(-50%, -50%); }
+/* the picker of the narrow form: hidden in the rail and the row */
+.sidetabs .st-pick { display: none; }
+@container wf-sidetabs (max-width: 639.98px) {
+	.sidetabs, .sidetabs.st-collapsed { border-bottom: none; padding: 0; }
+	.st-layout .sidetabs.sidetabs .st-head, .st-layout .sidetabs.sidetabs .st-scroll { display: none; }
+	.sidetabs .st-pick { display: flex; align-items: center; gap: 10px; width: 100%; min-height: var(--wf-field-h, 40px); padding: 0 12px; font: inherit; text-align: left; cursor: pointer; }
+	.sidetabs .st-pick-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.st-sheet { display: flex; flex-direction: column; }
+.st-sheet-item { position: relative; display: flex; align-items: center; gap: 10px; min-height: var(--wf-size-s, 32px); width: 100%; margin: 4px 0; padding: 4px 12px; border: none; border-left: 2px solid transparent; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.st-sheet-item:disabled { cursor: not-allowed; }
+.st-sheet-text { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.st-sheet-group { padding: 12px 12px 4px; }
 </style>

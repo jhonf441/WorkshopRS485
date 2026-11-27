@@ -17,10 +17,10 @@
 		<template v-if="tab === 0">
 			<div class="pe-bar">
 				<v-btn small outlined :loading="reading" :disabled="!params.length" @click="readAll()"><v-icon small left>mdi-download</v-icon>{{ $t('plugins.WorkshopRS485.machineProfile.read_all') }}</v-btn>
-				<help-tip :title="ht('params_title')" :what="ht('params_what')" :why="ht('params_why')" :how="ht('params_how')" />
 				<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.machineProfile.name_register_or_word')" dense outlined hide-details clearable class="pe-search" />
 				<say-line :text="msg || ''" :error="msgError" class="text-caption" />
 			</div>
+				<help-fold class="mx-3 mb-2" :items="[{ title: ht('params_title'), what: ht('params_what'), why: ht('params_why'), how: ht('params_how') }]" />
 			<lock-reason :min="reasonRole('profile')" class="px-3" :subject="$t('plugins.WorkshopRS485.subjects.machine_profile')" />
 			<div v-if="!params.length" class="text-body-2 grey--text pa-3">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_has_no_parameters') }}</div>
 			<v-simple-table v-else dense class="pe-table">
@@ -54,13 +54,12 @@
 									{{ r.func === 4 ? $t('plugins.WorkshopRS485.common.input_function_4') : $t('plugins.WorkshopRS485.common.holding_function_3') }} &middot; {{ $t('plugins.WorkshopRS485.machineProfile.scale_n', { n: r.scale }) }}<span v-if="r.defaultValue != null"> &middot; {{ $t('plugins.WorkshopRS485.machineProfile.factory_value', { v: r.defaultValue, unit: r.unit || '' }) }}</span>
 								</div>
 								<div class="d-flex flex-wrap align-center" style="gap:8px">
-									<v-btn x-small outlined :loading="busy === key(r) + 'l'" @click.stop="readOne(r)">{{ $t('plugins.WorkshopRS485.common.read') }}</v-btn>
+									<v-btn small outlined :loading="busy === key(r) + 'l'" @click.stop="readOne(r)">{{ $t('plugins.WorkshopRS485.common.read') }}</v-btn>
 									<template v-if="r.access === 'write'">
 										<v-select v-if="r.options && r.options.length" v-model="newItem" :items="r.options.map(o => ({ text: o.value + ' = ' + o.text, value: o.value }))" dense outlined hide-details class="pe-new-sel" @click.stop />
 										<v-text-field v-else v-model.number="newItem" type="number" step="any" :label="$t('plugins.WorkshopRS485.machineProfile.new_value') + (r.unit ? ' (' + r.unit + ')' : '')" dense outlined hide-details class="pe-new" @click.stop />
-										<v-btn x-small outlined :color="armed === key(r) ? 'error' : ''" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" :loading="busy === key(r) + 'e'" @click.stop="arm(r)">
-											{{ armed === key(r) ? $t('plugins.WorkshopRS485.machineProfile.tap_again_to_write') : $t('plugins.WorkshopRS485.common.write') }}
-										</v-btn>
+										<!-- writing is a write of the family (workshop-action.js): a double touch (4000 ms), one request; the answer goes to the message line of the page -->
+										<wf-action-button :action="writeAction(r)" :label="$t('plugins.WorkshopRS485.common.write')" :arm-label="$t('plugins.WorkshopRS485.machineProfile.tap_again_to_write')" :disabled="newItem === null || newItem === '' || !can('rs485.action', { action: 'write_parameter' })" @run="writeAction(r).run({ r })" />
 									</template>
 									<span v-else class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.machineProfile.read_only') }}</span>
 								</div>
@@ -74,12 +73,12 @@
 		<!-- ===== alarmas ===== -->
 		<template v-else>
 			<div class="text-body-2 mb-2 d-flex align-center flex-wrap">
-				<help-tip :title="ht('alarms_title')" :what="ht('alarms_what')" :why="ht('alarms_why')" :how="ht('alarms_how')" />
 				<span v-if="!pe.alarm" class="warning--text">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_doesn_t_say_where') }}</span>
 				<span v-else-if="alarmCurrent" class="error--text"><v-icon small color="error" class="mr-1">mdi-alert-octagon</v-icon>{{ $t('plugins.WorkshopRS485.common.active_now') }} <b>{{ alarmCurrent }}</b></span>
 				<span v-else class="success--text"><v-icon small color="success" class="mr-1">mdi-check-circle</v-icon>{{ $t('plugins.WorkshopRS485.common.no_active_alarm') }}</span>
 				<span v-if="pe.alarm" class="grey--text"> &middot; {{ $t('plugins.WorkshopRS485.machineProfile.code_in_register', { n: pe.alarm.record, kind: pe.alarm.func === 3 ? 'holding' : 'input' }) }}</span>
 			</div>
+				<help-fold class="mb-2" :items="[{ title: ht('alarms_title'), what: ht('alarms_what'), why: ht('alarms_why'), how: ht('alarms_how') }]" />
 			<v-text-field v-model="filterA" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.machineProfile.code_or_word')" dense outlined hide-details clearable class="pe-search mb-2" />
 			<div v-if="!alarms.length" class="text-body-2 grey--text pa-3">{{ $t('plugins.WorkshopRS485.machineProfile.the_profile_has_no_alarms') }}</div>
 			<div v-for="a in visibleA" :key="a.code" class="pe-alarm" :class="{ active: a.code === alarmCurrent }">
@@ -103,14 +102,16 @@ import i18n from '../../i18n'
 
 import { mapActions } from 'vuex'
 import { action, canMixin } from './api.js'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 import LockReason from './LockReason.vue' // vue/_shared36
 import SayLine from './SayLine.vue' // vue/_shared36
+import WfActionButton from './WfActionButton.vue' // vue/_shared36 (FASE2)
+import { createAction } from './workshop-action.js' // vue/_shared36 (FASE2)
 
 const ACCION = { pause: i18n.t('plugins.WorkshopRS485.machineProfile.pauses_the_job'), notify: i18n.t('plugins.WorkshopRS485.common.only_warns'), nothing: i18n.t('plugins.WorkshopRS485.machineProfile.does_nothing') };
 
 export default {
-	components: { SayLine, LockReason, HelpTip },
+	components: { HelpFold, SayLine, LockReason, WfActionButton },
 	mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['values', 'msg', 'msgError', 'newItem'],
@@ -129,8 +130,6 @@ export default {
 			busy: null,
 			open: null,
 			newItem: null,
-			armed: null,
-			armedTimer: null,
 			msg: '',
 			msgError: false
 		};
@@ -174,11 +173,14 @@ export default {
 	watch: {
 		open() {
 			this.newItem = null;
-			this.armed = null;
+			Object.keys(this.writeActions).forEach(k => this.writeActions[k].cancel()); // an armed write does not follow the person to another row
 		}
 	},
+	created() {
+		this.writeActions = {}; // one write per parameter, made when first drawn (not reactive: each action is)
+	},
 	beforeDestroy() {
-		clearTimeout(this.armedTimer);
+		Object.keys(this.writeActions).forEach(k => this.writeActions[k].dispose());
 	},
 	methods: {
 		ht(k) {
@@ -244,29 +246,26 @@ export default {
 				this.busy = null;
 			}
 		},
-		arm(r) {
+		writeAction(r) {
 			const k = this.key(r);
-			if (this.armed === k) {
-				this.armed = null;
-				this.write(r);
-				return;
+			if (!this.writeActions[k]) {
+				this.writeActions[k] = createAction({
+					arm: 'double',
+					run: async args => {
+						try {
+							const x = await action(this.sendCode, this.cfg.id, 'write_parameter', { record: args.r.record, value: Number(this.newItem) });
+							this.saveValues([{ func: 3, record: args.r.record, value: x.value }]);
+							this.notice(x.verified ? i18n.t('plugins.WorkshopRS485.machineProfile.value_verified', { name: args.r.name, v: x.value, unit: args.r.unit || '' }) : i18n.t('plugins.WorkshopRS485.machineProfile.device_returned_other', { name: args.r.name, v: x.value }), !x.verified);
+							this.newItem = null;
+							return {};
+						} catch (e) {
+							this.notice(e.message, true);
+							throw e;
+						}
+					}
+				});
 			}
-			this.armed = k;
-			clearTimeout(this.armedTimer);
-			this.armedTimer = setTimeout(() => { this.armed = null; }, 4000);
-		},
-		async write(r) {
-			this.busy = this.key(r) + 'e';
-			try {
-				const x = await action(this.sendCode, this.cfg.id, 'write_parameter', { record: r.record, value: Number(this.newItem) });
-				this.saveValues([{ func: 3, record: r.record, value: x.value }]);
-				this.notice(x.verified ? i18n.t('plugins.WorkshopRS485.machineProfile.value_verified', { name: r.name, v: x.value, unit: r.unit || '' }) : i18n.t('plugins.WorkshopRS485.machineProfile.device_returned_other', { name: r.name, v: x.value }), !x.verified);
-				this.newItem = null;
-			} catch (e) {
-				this.notice(e.message, true);
-			} finally {
-				this.busy = null;
-			}
+			return this.writeActions[k];
 		}
 	}
 };

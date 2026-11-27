@@ -233,19 +233,53 @@ const NEW_OF_OLD = {
 };
 // The old-layout mode files that are still there while their new path is not: `read(path)` -> text | null (404), may throw (then that file
 // says nothing). Only to SAY "modes not migrated" (the start-up wizard moves them); the page never uses the old files.
+// A machine that is migrated has NONE of the old files, and asking for five files that are not there writes "Could not find file" in the machine log (twice each, with
+// the .bak) every time a page looks. When none was there it is remembered for 1 hour (memory + sessionStorage; nothing ever writes the old paths, so there is nothing to forget): the question is not asked again in the session.
+const NONE_OLD_MS = 60 * 60 * 1000;
+const NONE_OLD_KEY = 'workshopModesNoOldFiles';
+let noneOldAt = 0;
+function noneOldRecently() {
+	if (typeof window === 'undefined') return false; // the memory is the browser's: a test (node) always asks
+	let t = noneOldAt;
+	if (!t) {
+		try {
+			t = Number(window.sessionStorage.getItem(NONE_OLD_KEY)) || 0;
+		} catch (e) {
+			t = 0;
+		}
+	}
+	return t > Date.now() - NONE_OLD_MS;
+}
+function rememberNoneOld() {
+	if (typeof window === 'undefined') return;
+	noneOldAt = Date.now();
+	try {
+		window.sessionStorage.setItem(NONE_OLD_KEY, String(noneOldAt));
+	} catch (e) {
+		// only in memory
+	}
+}
 export async function findUnmigrated(read) {
+	if (noneOldRecently()) return [];
+	let anyOld = false;
+	let failed = false;
 	const has = async f => {
 		try {
 			return (await read('0:/' + f)) !== null;
 		} catch (e) {
+			failed = true; // could not be read now (not a 404): it is not "none", ask again next time
 			return false;
 		}
 	};
 	const out = [];
 	for (const name of Object.keys(NEW_OF_OLD)) {
 		const old = 'sys/' + name + '.g';
-		if ((await has(old)) && !(await has(NEW_OF_OLD[name]))) out.push(old);
+		if (await has(old)) {
+			anyOld = true;
+			if (!(await has(NEW_OF_OLD[name]))) out.push(old);
+		}
 	}
+	if (!anyOld && !failed) rememberNoneOld();
 	return out;
 }
 // The row that says the modes were not migrated yet: `old` = the old paths found (array, may be empty). null when there is nothing to say.

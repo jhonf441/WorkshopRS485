@@ -10,7 +10,7 @@
 
 Page `/Plugins/RS485` ("RS485 devices"). Talks to equipment on an RS485 / Modbus bus: servos (the T3D servo here), spindle drives (VFD), meters. It finds adapters and devices by itself, shows torque, current and alarm codes live, keeps a history, reads and writes registers by hand, imports and exports device profiles and has a step-by-step diagnostic. It has its own backend (`main.py`, pyserial) and depends on the System service.
 
-Version documented: 2.6.x on DWC 3.6.3.
+Version documented: 2.9.x on DWC 3.6.3.
 
 ## 1. Requirements
 
@@ -22,12 +22,12 @@ Version documented: 2.6.x on DWC 3.6.3.
 
 ## 3. Functions
 
-The page is "RS485 devices" (side menu: Plugins > RS485). Its side bar has four entries: Devices, Buses and adapters, How it works, Diagnostics (icons only when collapsed with the double arrow). Red rectangles mark the control described. The adapter name and serial number are blurred.
+The page is "RS485 devices" (side menu: Plugins > RS485). Its side bar has four entries: Devices, Buses and adapters, How it works, Diagnostics (icons only when collapsed with the double arrow). Red rectangles mark the control described.
 
 ### Page header
 
 #### State chips, Refresh and pending steps
-- What: "All fine" (or a warning), "RS485 1: connected" (the state of the first bus), the button "Refresh" and "N steps pending" (setup steps not done).
+- What: "All fine" (or the number of faults or warnings, for example "Fault: 1"), "RS485 1: connected" (the state of the first bus), the button "Refresh" and "N steps pending" (setup steps not done).
 - Where: top right of the page header (any picture).
 - How: press "Refresh" to read the state again.
 
@@ -67,7 +67,7 @@ Picture 1: the orange banner with "Diagnose" and "Mark as absent", the card "Ser
 
 ![Device profile](https://raw.githubusercontent.com/jhonf441/WorkshopRS485/main/img/02-device-profile-and-registers.png)
 
-Picture 2: the second device (absent on purpose) with its profile, "Read all" and the register table; "Export profile (JSON)" at the top.
+Picture 2: the second device (absent on purpose) with its Parameters tab ("Read all again", the search box, the groups and the table of parameters); "Export profile (JSON)" at the top.
 
 #### Export profile (JSON)
 - What: exports the parameters and alarms of the device in the common format (the T3D profile is a sample for another device), as `workshop-rs485-device-<date>-<time>.json` (see "Files this page downloads and reads").
@@ -76,14 +76,14 @@ Picture 2: the second device (absent on purpose) with its profile, "Read all" an
 - Watch out: it downloads a file.
 
 #### Device profile and register table
-- What: the profile of the device (model, speed and format, address; "Example only: check every register against your drive's manual"); tabs Parameters and Alarms; a table with register, name, value and range.
-- Where: lower part of the device card (picture 2).
-- How: open a row with its arrow to see its details.
+- What: the Parameters tab of the card (the Alarm codes tab holds the alarms of the profile): the parameters of the profile are grouped (here "Speed and limits" and "Control"); each row shows the register, the name, the value "On the servo" and a "Change to" field.
+- Where: Parameters tab of the device card (picture 2).
+- How: press a group to see its parameters and read a row for its details.
 
 #### Read all and search
-- What: "Read all" reads every parameter of the profile; the search box filters by name, register or word.
-- Where: above the table (red rectangle, picture 2).
-- How: press "Read all".
+- What: "Read all" reads every parameter of the profile (once read, the button says "Read all again"); the search box filters by number, name or word.
+- Where: above the groups, in the Parameters tab (red rectangle, picture 2).
+- How: press "Read all" (or "Read all again").
 - Watch out: it only reads.
 
 #### Backups of the servo parameters (T3D)
@@ -113,7 +113,7 @@ Picture 2: the second device (absent on purpose) with its profile, "Read all" an
 
 ![Buses and adapters](https://raw.githubusercontent.com/jhonf441/WorkshopRS485/main/img/03-buses-and-adapters.png)
 
-Picture 3: "Automatic detection" with its two switches and "Search everything now", the adapters list (blurred) and "Buses" with "+ Another bus" (red rectangles).
+Picture 3: "Automatic detection" with its two switches and "Search everything now", the adapters list and "Buses" with "+ Another bus" (red rectangles).
 
 #### Automatic detection switches
 - What: "Search for new devices automatically": plugging a new adapter makes the system try every speed and format until something answers and create its bus; on existing buses, every 2 minutes it looks for new addresses (1-16), never during a job. "Add them automatically (no axis, they only warn)": what shows up is added with no axis and you get a notice in Activity and on the phone.
@@ -128,11 +128,11 @@ Picture 3: "Automatic detection" with its two switches and "Search everything no
 
 #### Adapters connected to the system
 - What: lists the USB serial adapters the system sees, with port, chip and driver, and which bus uses each.
-- Where: card under the detection (picture 3; the adapter name is blurred).
+- Where: card under the detection (picture 3).
 - Watch out: the name contains the adapter serial number: blur it before sharing a picture.
 
 #### Buses
-- What: a bus is one adapter (or the Duet's RS485): name, kind, port, speed and format (here 19200, 8E1), counts of good answers / no response / CRC and the devices on it; "Find devices (1-32)" looks for addresses; "+ Another bus" adds a bus.
+- What: a bus is one adapter (or the Duet's RS485). Each bus is a card with its counts of good answers / no response / CRC, the devices on it and the fields name, kind (USB adapter or Duet's RS485), adapter (port), speed and format (here 19200, 8E1); "Find devices (1-32)" looks for addresses, "Advanced" opens the other bus settings and "+ Another bus" adds a bus.
 - Where: card "Buses" (picture 3, bottom).
 - How: 1. Press "+ Another bus" and fill name, adapter, speed and format. 2. Press "Find devices (1-32)" on a bus to search.
 - Watch out: the system is the only master: do not connect another program to the same adapter.

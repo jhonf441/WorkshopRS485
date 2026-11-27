@@ -117,7 +117,7 @@ function el(tag, css, text) {
 	return e
 }
 
-const BTN = 'border:0;border-radius:6px;padding:8px 14px;min-height:44px;font-size:14px;cursor:pointer;color:#fff;'
+const BTN = 'border:0;border-radius:6px;padding:8px 14px;min-height:var(--wf-hit, 40px);font-size:14px;cursor:pointer;color:#fff;'
 
 function dialogLists(box, view) {
 	view.warnings.forEach(w => box.appendChild(el('div', 'color:#ffb74d;margin-top:8px;', w)))

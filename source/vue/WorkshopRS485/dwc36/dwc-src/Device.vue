@@ -35,13 +35,13 @@
 				<v-icon small color="grey">mdi-eye-off-outline</v-icon>
 				<span>{{ $t('plugins.WorkshopRS485.device.absent_on_purpose_it_is_not') }}</span>
 				<span v-if="live && live.answers" class="info--text">{{ $t('plugins.WorkshopRS485.device.it_answers_now') }}</span>
-				<v-btn x-small outlined color="primary" @click="$emit('absent', false)"><v-icon x-small left>mdi-eye-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.watch_again') }}</v-btn>
+				<v-btn small outlined color="primary" @click="$emit('absent', false)"><v-icon small left>mdi-eye-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.watch_again') }}</v-btn>
 			</div>
 			<div v-else-if="live && live.state === 'without_communication'" class="d-flex align-center flex-wrap text-caption mt-2" style="gap:6px">
 				<template v-if="live.seen_does_s != null"><span>{{ $t('plugins.WorkshopRS485.device.last_answered') }}</span> {{ doesText.n }} <span>{{ doesText.u }}</span></template>
 				<span v-else>{{ ' ' }}{{ $t('plugins.WorkshopRS485.device.never_answered') }}</span>
-				<v-btn x-small text :title="$t('plugins.WorkshopRS485.common.if_it_is_not_connected_on')" @click="$emit('absent', true)">
-					<v-icon x-small left>mdi-eye-off-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.mark_as_absent') }}
+				<v-btn small text :title="$t('plugins.WorkshopRS485.common.if_it_is_not_connected_on')" @click="$emit('absent', true)">
+					<v-icon small left>mdi-eye-off-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.mark_as_absent') }}
 				</v-btn>
 			</div>
 			<div v-if="live && live.message && !v.alarm" class="text-body-2 mt-2" :class="isNotice ? 'blue--text text--lighten-2' : (live.state === 'alarm' ? 'error--text' : 'warning--text')">
@@ -53,7 +53,7 @@
 			<template v-if="rich">
 				<div class="tiles mt-3">
 					<div class="tile" :class="{ 'tile-alarm': v.alarm }">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-alert-octagon-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.alarm') }}<help-tip :title="ht('alarm_title')" :what="ht('alarm_what')" :why="ht('alarm_why')" :how="ht('alarm_how')" /></div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-alert-octagon-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.alarm') }}</div>
 						<div class="tile-value" :class="v.alarm ? 'error--text' : (v.alarm === 0 ? 'success--text' : '')">{{ v.alarm == null ? '--' : (v.alarm ? (isT3d ? 'Err' : '') + v.alarm : $t('plugins.WorkshopRS485.common.none')) }}</div>
 						<div v-if="alarmInfo" class="tile-sub red--text text--lighten-2">{{ alarmInfo.name }}</div>
 					</div>
@@ -65,24 +65,25 @@
 						</div>
 					</template>
 					<div v-if="isT3d" class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-arm-flex-outline</v-icon>Torque<help-tip :title="ht('torque_title')" :what="ht('torque_what')" :why="ht('torque_why')" :how="ht('torque_how')" /></div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-arm-flex-outline</v-icon>Torque</div>
 						<div class="tile-value">{{ v.torque == null ? '--' : v.torque }}<small> %</small></div>
 						<v-progress-linear :value="Math.min(100, Math.abs(v.torque || 0) / (op.torque_max || 150) * 100)" height="4" rounded :color="Math.abs(v.torque || 0) > (op.torque_max || 150) * 0.8 ? 'warning' : 'success'" background-color="grey darken-3" />
 						<div class="tile-sub">{{ $t('plugins.WorkshopRS485.device.peak_and_limit', { peak: v.torque_peak == null ? '--' : v.torque_peak, max: op.torque_max }) }}</div>
 					</div>
 					<div v-if="isT3d" class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-flash-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.current') }}<help-tip :title="ht('current_title')" :what="ht('current_what')" :why="ht('current_why')" :how="ht('current_how')" /></div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-flash-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.current') }}</div>
 						<div class="tile-value">{{ v.current == null ? '--' : v.current.toFixed(1) }}<small> A</small></div>
 						<svg v-if="histCurrent.length > 1" class="mini" viewBox="0 0 100 20" preserveAspectRatio="none"><polyline :points="line(histCurrent)" fill="none" stroke="#66BB6A" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
 						<div class="tile-sub">{{ op.current_max ? $t('plugins.WorkshopRS485.device.limit') + op.current_max + ' A' : $t('plugins.WorkshopRS485.device.no_limit') }}</div>
 					</div>
 					<div class="tile">
-						<div class="tile-label"><v-icon x-small class="mr-1">mdi-shield-check-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.if_it_fails') }}<help-tip :title="ht('if_fails_title')" :what="ht('if_fails_what')" :why="ht('if_fails_why')" :how="ht('if_fails_how')" /></div>
+						<div class="tile-label"><v-icon x-small class="mr-1">mdi-shield-check-outline</v-icon>{{ $t('plugins.WorkshopRS485.device.if_it_fails') }}</div>
 						<div class="tile-value tile-value-small">{{ textAction }}</div>
 						<div class="tile-sub">{{ $t('plugins.WorkshopRS485.device.every_s_n_readings', { s: op.poll_s, n: live ? live.readings : 0 }) }}</div>
 					</div>
 				</div>
 
+					<help-fold class="mt-3" :items="[{ title: ht('alarm_title'), what: ht('alarm_what'), why: ht('alarm_why'), how: ht('alarm_how') }, (isT3d) ? { title: ht('torque_title'), what: ht('torque_what'), why: ht('torque_why'), how: ht('torque_how') } : null, (isT3d) ? { title: ht('current_title'), what: ht('current_what'), why: ht('current_why'), how: ht('current_how') } : null, { title: ht('if_fails_title'), what: ht('if_fails_what'), why: ht('if_fails_why'), how: ht('if_fails_how') }].filter(Boolean)" />
 				<!-- active alarm: what is happening, what to do, how to clear it -->
 				<div v-if="v.alarm" class="alarm-box mt-3" :class="{ notice: isNotice }">
 					<div class="d-flex align-center flex-wrap" style="gap:8px">
@@ -118,7 +119,7 @@
 							<v-row v-if="chartVars.length" dense>
 								<v-col v-for="w in chartVars" :key="w.name" cols="12" md="6">
 									<div class="text-caption grey--text">{{ w.name }}</div>
-									<detail-chart :history="histVars[w.name]" :color="w.color" :unit="w.unit" :label="w.name" :height="140" />
+									<detail-chart :history="histVars[w.name].filter(Boolean)" :color="w.color" :unit="w.unit" :label="w.name" :height="140" />
 								</v-col>
 							</v-row>
 							<div v-else class="empty">
@@ -205,7 +206,7 @@
 						<v-btn small outlined :disabled="!can('rs485.action', { action: 'identify' })" :loading="busy === 'identify'" @click="identify()">{{ $t('plugins.WorkshopRS485.device.identify') }}</v-btn>
 						<template v-if="ident">
 							<span class="text-body-2"><b>{{ ident.manufacturer || '?' }}</b> {{ ident.model }}<span v-if="ident.version" class="grey--text"> &middot; {{ $t('plugins.WorkshopRS485.device.version_n', { v: ident.version }) }}</span></span>
-							<v-btn x-small text color="primary" @click="$emit('rename', nameIdent)">{{ $t('plugins.WorkshopRS485.device.use_as_name') }}</v-btn>
+							<v-btn small text color="primary" @click="$emit('rename', nameIdent)">{{ $t('plugins.WorkshopRS485.device.use_as_name') }}</v-btn>
 						</template>
 						<span v-else-if="identNo" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.device.it_did_not_answer_the_identification') }}</span>
 						<span v-else class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.device.asks_the_device_for_its_maker') }}</span>
@@ -242,7 +243,7 @@
 									<td>{{ x.value }}<span v-if="x.value > 32767" class="grey--text"> ({{ x.value - 65536 }})</span></td>
 									<td class="grey--text">0x{{ x.value.toString(16).toUpperCase().padStart(4, '0') }}</td>
 									<td class="text-right">
-										<v-btn v-if="!alreadyWatched(x)" x-small text color="primary" @click="$emit('watch', { record: x.record, func: x.func })">{{ $t('plugins.WorkshopRS485.device.watch') }}</v-btn>
+										<v-btn v-if="!alreadyWatched(x)" small text color="primary" @click="$emit('watch', { record: x.record, func: x.func })">{{ $t('plugins.WorkshopRS485.device.watch') }}</v-btn>
 										<span v-else class="text-caption success--text">{{ $t('plugins.WorkshopRS485.device.watched') }}</span>
 									</td>
 								</tr>
@@ -268,13 +269,14 @@ import StatesT3d from './StatesT3d.vue'
 import AlarmsT3d from './AlarmsT3d.vue'
 import HistoryT3d from './HistoryT3d.vue'
 import MachineProfile from './MachineProfile.vue'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 import { action, info, deleted, states, does, textOf, canMixin } from './api.js'
 import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import { exchangeExportJson } from './data-exchange-ui.js'
 import { ts } from './shared-t.js'
 import { DEVICE_FORMAT, DEVICE_VERSION, DEVICE_PLUGIN, deviceData } from './device-exchange.js'
 import LockReason from './LockReason.vue' // vue/_shared36
+import { WF_ARM_WINDOW } from './workshop-action.js' // vue/_shared36 (FASE2): the double touch time of the family, 4000 ms
 import SayLine from './SayLine.vue' // vue/_shared36
 
 const HIST = 300;
@@ -293,7 +295,7 @@ export default {
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['histTorque', 'histCurrent', 'histVars', 'table', 'tableError', 'result', 'resultError', 'manual', 'ident', 'identNo', 'expState', 'expList', 'lastReading'],
 	sessionErrors: ['tableError', 'resultError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
-	components: { SayLine, LockReason, HelpTip, DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
+	components: { HelpFold, SayLine, LockReason, DetailChart, ParamsT3d, StatesT3d: StatesT3d, AlarmsT3d: AlarmsT3d, HistoryT3d: HistoryT3d, MachineProfile: MachineProfile },
 	props: {
 		cfg: { type: Object, required: true },
 		live: { type: Object, default: null },
@@ -511,7 +513,7 @@ export default {
 			}
 			this.armed = that;
 			clearTimeout(this.armedTimer);
-			this.armedTimer = setTimeout(() => { this.armed = null; }, 4000);
+			this.armedTimer = setTimeout(() => { this.armed = null; }, WF_ARM_WINDOW);
 		},
 		fold(si) {
 			this.collapsed = si;
@@ -761,7 +763,7 @@ export default {
 	padding: 3px 0;
 }
 .tile-sub {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--tp-faint, #9e9e9e);
 	margin-top: 2px;
 }

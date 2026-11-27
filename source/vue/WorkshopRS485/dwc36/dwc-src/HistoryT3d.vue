@@ -29,11 +29,13 @@
 			</v-btn-toggle>
 			<v-spacer />
 			<v-btn small outlined :loading="loading" @click="load()"><v-icon small left>mdi-refresh</v-icon>{{ $t('plugins.WorkshopRS485.common.refresh') }}</v-btn>
-			<v-btn small text :color="armed ? 'error' : ''" :disabled="!events.length || !can('rs485.clear_history')" @click="touchDelete()">
-				<v-icon small left>mdi-delete-sweep</v-icon>{{ armed ? $t('plugins.WorkshopRS485.historyT3d.tap_again_to_clear') : $t('plugins.WorkshopRS485.historyT3d.clear_history') }}
-			</v-btn>
+			<!-- clearing is a write of the family (workshop-action.js): a double touch, then sending / done / refused; the button keeps ONE size -->
+			<wf-action-button :action="clearAction" :label="$t('plugins.WorkshopRS485.historyT3d.clear_history')" :arm-label="$t('plugins.WorkshopRS485.historyT3d.tap_again_to_clear')" danger :disabled="!events.length || !can('rs485.clear_history')" @run="clearAction.run({})" />
 		</div>
 		<say-line :text="msg || ''" :error="msgError" class="text-body-2 mt-2" />
+		<!-- what happened to the clear: a refusal is told by its cause (say-line), the rest by the result line of the family -->
+		<say-line v-if="clearFailure" :text="clearFailure" error class="text-body-2 mt-2" />
+		<wf-result v-else :action="clearAction" class="mt-2" @retry="clearAction.retry()" />
 		<lock-reason :min="reasonRole('history')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.history')" />
 
 		<div v-if="!rows.length && !loading" class="empty mt-3">
@@ -77,11 +79,14 @@ import { callService, canMixin } from './api.js'
 import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
 import LockReason from './LockReason.vue' // vue/_shared36
 import SayLine from './SayLine.vue' // vue/_shared36
+import WfActionButton from './WfActionButton.vue' // vue/_shared36 (FASE2)
+import WfResult from './WfResult.vue' // vue/_shared36 (FASE2)
+import { createAction } from './workshop-action.js' // vue/_shared36 (FASE2)
 
 const p2 = n => String(n).padStart(2, '0');
 
 export default {
-	components: { SayLine, LockReason },
+	components: { SayLine, LockReason, WfActionButton, WfResult },
 	mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['events', 'msg', 'msgError'],
@@ -94,14 +99,18 @@ export default {
 		return {
 			events: [],	// from the oldest to the newest
 			loading: false,
-			armed: false,
-			armedTimer: null,
 			msg: null,
 			msgError: false,
 			see: 'todo'
 		};
 	},
 	computed: {
+		// the refusal or failure of the last clear, told by its cause (a closed session, a role too low, the service's own words)
+		clearFailure() {
+			const a = this.clearAction;
+			if (a.state !== 'error' || !a.error || a.error.code === 'unverified') return null;
+			return failureOf(a.error, m => i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_clear_history'));
+		},
 		// each fault with how long it lasted (until the next 'normal'), newest on top
 		withDuration() {
 			const out = this.events.map(e => ({ ...e }));
@@ -154,14 +163,23 @@ export default {
 			};
 		}
 	},
+	created() {
+		// clearing the history: one write of the family (a double touch, one request, its result next to the button)
+		this.clearAction = createAction({
+			arm: 'double',
+			run: () => callService(this.sendCode, { P: 'clear_history', I: this.dispId }).then(() => ({ text: i18n.t('plugins.WorkshopRS485.historyT3d.history_cleared') })),
+			after: () => this.load()
+		});
+	},
 	mounted() {
 		this.load();
 	},
 	beforeDestroy() {
-		clearTimeout(this.armedTimer);
+		this.clearAction.dispose();
 	},
 	methods: {
 		onSessionChange(kind) {
+			this.clearAction.reset() // what was in the air belonged to the person who left
 			if (kind !== 'signed-out') this.load()
 		},
 		...mapActions('machine', ['sendCode']),
@@ -176,27 +194,6 @@ export default {
 				this.msgError = true;
 			} finally {
 				this.loading = false;
-			}
-		},
-		touchDelete() {
-			if (!this.armed) {
-				this.armed = true;
-				clearTimeout(this.armedTimer);
-				this.armedTimer = setTimeout(() => { this.armed = false; }, 4000);
-				return;
-			}
-			this.armed = false;
-			this.remove();
-		},
-		async remove() {
-			try {
-				await callService(this.sendCode, { P: 'clear_history', I: this.dispId });
-				this.msg = i18n.t('plugins.WorkshopRS485.historyT3d.history_cleared');
-				this.msgError = false;
-				await this.load();
-			} catch (e) {
-				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.historyT3d.could_not_clear', { error: m }), () => i18n.t('plugins.WorkshopRS485.common.act_clear_history'));
-				this.msgError = true;
 			}
 		},
 		nameAlarm(c) {
@@ -272,7 +269,7 @@ export default {
 	white-space: nowrap;
 }
 .hres-tile .sub {
-	font-size: 11px;
+	font-size: 12px;
 	color: var(--tp-faint, #9e9e9e);
 	overflow: hidden;
 	text-overflow: ellipsis;

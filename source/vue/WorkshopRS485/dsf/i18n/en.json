@@ -666,5 +666,7 @@
  "t3d_torque_over_the_limit": "torque {torque}% exceeds the limit {limit}% (possible jam)",
  "t3d_unit_0_01_turns": "0.01 turns",
  "t3d_unit_degrees": "degrees",
- "t3d_unit_pulses": "pulses"
+ "t3d_unit_pulses": "pulses",
+ "workshop_api_process_title": "Service API (HTTP)",
+ "workshop_api_process_description": "HTTP endpoint of the service API in DSF; it reconnects by itself if DSF drops it."
 }

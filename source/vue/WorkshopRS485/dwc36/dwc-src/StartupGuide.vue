@@ -15,7 +15,7 @@
 				<div v-if="p.items && p.items.length" class="d-flex flex-wrap mt-1" style="gap:6px">
 					<v-chip v-for="it in p.items" :key="it.text" x-small outlined :color="it.color">{{ it.text }}</v-chip>
 				</div>
-				<v-btn v-if="p.button && p.state !== 'ok'" x-small outlined color="primary" class="mt-2" @click="action(p.button.action)">{{ p.button.text }}</v-btn>
+				<v-btn v-if="p.button && p.state !== 'ok'" small outlined color="primary" class="mt-2" @click="action(p.button.action)">{{ p.button.text }}</v-btn>
 			</div>
 		</div>
 

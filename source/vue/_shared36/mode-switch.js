@@ -1,6 +1,6 @@
 'use strict'
 
-// ONE rule for "may this person switch the machine mode (FFF / Laser / CNC)?" (owner 2026-11-06): the Printing page said "sign-in required"
+// ONE rule for "may this person switch the machine mode (FFF / Laser / CNC)?" (2026-11-06): the Printing page said "sign-in required"
 // to switch to FFF while the mode buttons of the control bar switched without a word. Every place that switches the mode (the banner of
 // Printing, the mode buttons of the bar, the head change) asks here; the JS twin is workshopModeSwitchAccess of src/_shared/07-modes.js.
 //

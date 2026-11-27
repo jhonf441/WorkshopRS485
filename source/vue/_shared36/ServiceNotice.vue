@@ -11,7 +11,7 @@
 				<!-- the way out in one tap: the plugins page of DWC, where WorkshopService is installed and started -->
 				<v-btn small outlined color="warning" class="mt-2 service-notice-action" to="/Settings/Plugins"><v-icon small left>mdi-puzzle-outline</v-icon>{{ ts('service_notice_open_plugins') }}</v-btn>
 				<div class="text-body-2 mt-2">
-					<a href="#" @click.prevent="see = !see">{{ see ? ts('service_notice_hide') : ts('service_notice_show') }}</a>
+					<button type="button" class="service-notice-more wf-hit" :aria-expanded="see ? 'true' : 'false'" @click="see = !see">{{ see ? ts('service_notice_hide') : ts('service_notice_show') }}</button>
 				</div>
 				<!-- the explanation goes right here (2026-10-10): the GitHub link gave
 					     404 with private repos, and without the service there is no workshop page -->
@@ -49,6 +49,20 @@ export default {
 </script>
 
 <style scoped>
+/* a text button that reads like a link: seen 24, touched 40 (.wf-hit of the family) */
+.service-notice-more {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--wf-size-xs, 24px);
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--wf-c-info-text, var(--v-info-base, #1e88e5));
+	font: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+	cursor: pointer;
+}
 .notice-explains p {
 	margin-bottom: 6px;
 }

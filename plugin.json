@@ -2,7 +2,7 @@
   "id": "WorkshopRS485",
   "name": "RS485 Devices",
   "author": "jhonf441",
-  "version": "2.6.38",
+  "version": "2.9.0",
   "license": "GPL-3.0-or-later",
   "homepage": "https://github.com/jhonf441/WorkshopRS485",
   "tags": [
@@ -38,9 +38,11 @@
     "rs485": null
   },
   "sdFiles": [
+    "sys/workshop/macros/macros.WorkshopRS485.json",
     "sys/workshop/macros/system/rs485-read.g"
   ],
   "dsfFiles": [
+    "board_reply.py",
     "bus.py",
     "detection.py",
     "diagnosis.py",
@@ -65,9 +67,9 @@
     "workshop_api.py"
   ],
   "dwcFiles": [
-    "css/WorkshopRS485.855f8488.css",
-    "css/WorkshopRS485.855f8488.css.gz",
-    "js/WorkshopRS485.1a3d2bd6.js",
-    "js/WorkshopRS485.1a3d2bd6.js.gz"
+    "css/WorkshopRS485.d4e4c3b5.css",
+    "css/WorkshopRS485.d4e4c3b5.css.gz",
+    "js/WorkshopRS485.b28d24ec.js",
+    "js/WorkshopRS485.b28d24ec.js.gz"
   ]
 }

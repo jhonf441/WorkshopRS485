@@ -17,7 +17,6 @@
 			<v-spacer />
 			<v-text-field v-model="filter" prepend-inner-icon="mdi-magnify" :placeholder="$t('plugins.WorkshopRS485.paramsT3d.search_number_name_or_word_e')" dense outlined hide-details clearable class="pt3-search" />
 			<v-btn small outlined :loading="reading" @click="readTodo()"><v-icon small left>mdi-refresh</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.read_all_again') }}</v-btn>
-			<help-tip :title="ht('read_title')" :what="ht('read_what')" :why="ht('read_why')" :how="ht('read_how')" />
 			<params-backups :disp-id="dispId" :values="values" :no-exists="noExists" :rows="rows" :edited="edited" :has-reading="hasReading" :reading="reading"
 				@compare="compareWith" @restore="applyAsChanges" @load="applyAsChanges" @message="say" />
 		</div>
@@ -36,7 +35,7 @@
 			     and the "mandatory" chip-group sent it back to "All" instantly. -->
 			<v-menu v-model="menuLabels" offset-y max-width="320" max-height="60vh">
 				<template v-slot:activator="{ on, attrs }">
-					<v-btn x-small text v-bind="attrs" v-on="on"><v-icon x-small left>mdi-tag-multiple</v-icon>{{ labelFilter ? labels[labelFilter].text : $t('plugins.WorkshopRS485.paramsT3d.filter_by_tag') }}</v-btn>
+					<v-btn small text v-bind="attrs" v-on="on"><v-icon small left>mdi-tag-multiple</v-icon>{{ labelFilter ? labels[labelFilter].text : $t('plugins.WorkshopRS485.paramsT3d.filter_by_tag') }}</v-btn>
 				</template>
 				<v-card class="pa-2 pt3-menu-labels">
 					<div class="text-caption grey--text mb-1">{{ $t('plugins.WorkshopRS485.paramsT3d.tap_a_tag_to_filter') }}</div>
@@ -92,7 +91,12 @@
 				</div>
 				<div v-else-if="filterActive" class="text-body-2 grey--text mb-2">{{ $t('plugins.WorkshopRS485.paramsT3d.n_parameters', { n: visible.length }) }}</div>
 
-				<param-card v-for="p in visible" :key="p.record" :p="p" :page="self" />
+				<table v-if="visible.length" class="wf-table pt3-table">
+					<thead>
+						<tr><th>{{ $t('plugins.WorkshopRS485.paramsT3d.parameter') }}</th><th>{{ $t('plugins.WorkshopRS485.paramsT3d.on_the_servo') }}</th><th>{{ $t('plugins.WorkshopRS485.paramsT3d.change_to') }}</th></tr>
+					</thead>
+					<param-card v-for="p in visible" :key="p.record" :p="p" :page="self" />
+				</table>
 				<div v-if="!visible.length && table.length" class="text-body-2 grey--text pa-4">{{ $t('plugins.WorkshopRS485.paramsT3d.nothing_to_show_with_this_filter') }}</div>
 			</div>
 		</div>
@@ -111,19 +115,18 @@
 				<v-btn small color="primary" :loading="writing" :disabled="(hasInvalid && !force) || !can('rs485.action', { action: 'write_param', data: { force } })" @click="writeTodo()">
 					<v-icon small left>mdi-upload</v-icon>{{ $t('plugins.WorkshopRS485.paramsT3d.write_to_the_servo') }}
 				</v-btn>
-				<help-tip :title="ht('write_title')" :what="ht('write_what')" :why="ht('write_why')" :if-missing="ht('write_missing')" :how="ht('write_how')" />
 			</template>
 			<template v-else>
 				<div class="pt3-changes-list">
 					<v-icon small color="warning" class="mr-1">mdi-alert</v-icon>
 					{{ $t('plugins.WorkshopRS485.paramsT3d.n_written_but', { n: pendingEeprom }) }} <b>{{ $t('plugins.WorkshopRS485.paramsT3d.not_saved') }}</b>{{ $t('plugins.WorkshopRS485.paramsT3d.they_re_lost_when_the_servo') }}
 				</div>
-				<v-btn small :color="armed ? 'error' : 'primary'" :dark="armed" :loading="savingEeprom" :disabled="!can('rs485.action', { action: 'save_eeprom' })" @click="touchEeprom()">
-					<v-icon small left>mdi-content-save</v-icon>{{ armed ? $t('plugins.WorkshopRS485.paramsT3d.tap_again_store_in_the_servo') : $t('plugins.WorkshopRS485.paramsT3d.save_to_eeprom') }}
-				</v-btn>
-				<help-tip :title="ht('eeprom_title')" :what="ht('eeprom_what')" :why="ht('eeprom_why')" :how="ht('eeprom_how')" />
+				<!-- storing in the servo is a write of the family (workshop-action.js): a double touch (4000 ms), one request; its answer goes to the message line of the page -->
+				<wf-action-button :action="eepromAction" :label="$t('plugins.WorkshopRS485.paramsT3d.save_to_eeprom')" :arm-label="$t('plugins.WorkshopRS485.paramsT3d.tap_again_store_in_the_servo')" main :disabled="!can('rs485.action', { action: 'save_eeprom' })" @run="eepromAction.run({})" />
+				<wf-result v-if="eepromAction.state !== 'error'" :action="eepromAction" />
 			</template>
 		</div>
+		<help-fold class="mt-3" :items="[{ title: ht('read_title'), what: ht('read_what'), why: ht('read_why'), how: ht('read_how') }, { title: ht('write_title'), what: ht('write_what'), why: ht('write_why'), ifMissing: ht('write_missing'), how: ht('write_how') }, { title: ht('eeprom_title'), what: ht('eeprom_what'), why: ht('eeprom_why'), how: ht('eeprom_how') }]" />
 	</div>
 </template>
 
@@ -139,10 +142,13 @@ import { failureOf } from './session-refusal.js' // a failed call as the error i
 import { TOTAL, BY_READING, three, validate } from './params-model.js'
 import ParamCard from './ParamCard.vue'
 import ParamsBackups from './ParamsBackups.vue'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 import { backupChanges } from './params-backup.js';
 import LockReason from './LockReason.vue' // vue/_shared36
 import SayLine from './SayLine.vue' // vue/_shared36
+import WfActionButton from './WfActionButton.vue' // vue/_shared36 (FASE2)
+import WfResult from './WfResult.vue' // vue/_shared36 (FASE2)
+import { createAction } from './workshop-action.js' // vue/_shared36 (FASE2)
 import { createSessionCache } from './session-cache.js'
 
 // Values read per device: they survive closing/opening the panel (the whole
@@ -155,7 +161,7 @@ export default { mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1); onSessionChange loads the table again for the one who signs in
 	sessionData: ['table', 'groups', 'partial', 'generic', 'regList', 'manual', 'labels', 'risks', 'iconsGroup', 'functionsDi', 'functionsDo', 'values', 'hourReading', 'edited', 'written', 'comparing', 'msg', 'msgError'],
 	sessionErrors: ['msg', 'msgError'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
-	components: { SayLine, LockReason, HelpTip, ParamCard, ParamsBackups },
+	components: { HelpFold, SayLine, LockReason, ParamCard, ParamsBackups, WfActionButton, WfResult },
 	props: {
 		dispId: { type: String, required: true }
 	},
@@ -183,9 +189,6 @@ export default { mixins: [canMixin],
 			readN: 0,
 			writing: false,
 			force: false,
-			armed: false,
-			armedTimer: null,
-			savingEeprom: false,
 			comparing: c.comparing || null,
 			labels: {},
 			risks: {},
@@ -298,15 +301,35 @@ export default { mixins: [canMixin],
 			return this.generic ? 0 : Object.keys(this.written).length; // only the servo has a memory to save
 		}
 	},
+	created() {
+		// storing what was written in the servo memory: one write of the family; the page line tells the answer (the buttons leave once nothing is pending)
+		this.eepromAction = createAction({
+			arm: 'double',
+			run: async () => {
+				try {
+					await action(this.sendCode, this.dispId, 'save_eeprom');
+				} catch (e) {
+					this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_save') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save'));
+					this.msgError = true;
+					throw e;
+				}
+				this.written = {};
+				this.msg = tp('saved_in_the_servo_eeprom_the');
+				this.msgError = false;
+				return {};
+			}
+		});
+	},
 	async mounted() {
 		await this.start();
 	},
 	beforeDestroy() {
-		clearTimeout(this.armedTimer);
+		this.eepromAction.dispose();
 		CACHE.set(this.dispId, { values: this.values, hour: this.hourReading, written: this.written, comparing: this.comparing });
 	},
 	methods: {
 		onSessionChange(kind) {
+			this.eepromAction.reset()
 			if (kind !== 'signed-out') this.start();
 		},
 		async start() {
@@ -462,30 +485,6 @@ export default { mixins: [canMixin],
 				this.msgError = false;
 			}
 		},
-		touchEeprom() {
-			if (!this.armed) {
-				this.armed = true;
-				clearTimeout(this.armedTimer);
-				this.armedTimer = setTimeout(() => { this.armed = false; }, 4000);
-				return;
-			}
-			this.armed = false;
-			this.saveEeprom();
-		},
-		async saveEeprom() {
-			this.savingEeprom = true;
-			try {
-				await action(this.sendCode, this.dispId, 'save_eeprom');
-				this.written = {};
-				this.msg = tp('saved_in_the_servo_eeprom_the');
-				this.msgError = false;
-			} catch (e) {
-				this.msg = failureOf(e, m => i18n.t('plugins.WorkshopRS485.common.could_not_save') + m, () => i18n.t('plugins.WorkshopRS485.common.act_save'));
-				this.msgError = true;
-			} finally {
-				this.savingEeprom = false;
-			}
-		},
 		// the message line of the page, for the backups panel too
 		say(text, isError) {
 			this.msg = text;
@@ -608,7 +607,7 @@ export default { mixins: [canMixin],
 	gap: 3px;
 	padding: 1px 7px 1px 5px;
 	border-radius: 10px;
-	font-size: 11px;
+	font-size: 12px;
 	color: #fff;
 	cursor: pointer;
 	white-space: nowrap;
@@ -626,11 +625,6 @@ export default { mixins: [canMixin],
 	gap: 8px;
 	padding: 3px 0;
 	cursor: pointer;
-}
-.pt3-label {
-	font-size: 11px;
-	color: var(--tp-faint, #9e9e9e);
-	margin-bottom: 2px;
 }
 .pt3-changes {
 	position: sticky;

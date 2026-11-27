@@ -28,6 +28,7 @@ import secrets
 import threading
 import time
 
+import board_reply
 import messages
 
 API_VERSION = 1
@@ -61,6 +62,8 @@ class ApiError(Exception):
         "failed": 424,             # Failed Dependency: the operation ran and the machine or a program answered with an error
         "invalid_args": 422,
         "internal": 500, "busy": 503,
+        # D-15: these were raised without an entry and answered the default 400; listed with that same status, so nothing changes for a client.
+        "refused": 400, "not_found": 400, "not_implemented": 400, "too_big": 400,
     }
 
     def __init__(self, code, message, **extra):
@@ -326,7 +329,7 @@ class Registry:
             t0 = time.time()
             out = op.fn(clean, ctx)
             result, message = split_result(out)
-            if isinstance(message, str) and message.lstrip().lower().startswith("error"):
+            if isinstance(message, str) and board_reply.is_error(message, first_line_only=True):
                 raise ApiError("failed", message.strip())
             body = {"ok": True, "op": op.name, "result": result, "message": message}
             status = 200
@@ -482,6 +485,15 @@ async def _read_full_request(conn):
     return json.loads(data.decode("utf-8"))  # raises: incomplete or too big
 
 
+def _beat(error=None):
+    """Heartbeat of the process page (heartbeats.py); it must never get in the way of the endpoint thread."""
+    try:
+        import heartbeats
+        heartbeats.error("api", error) if error is not None else heartbeats.ok("api")
+    except Exception:
+        pass
+
+
 def serve(registry, namespace, path="api", http_info=None):
     """Registers GET and POST /machine/<namespace>/<path> in a thread of its own
     and keeps them alive (re-registers if the connection to DSF drops).
@@ -522,6 +534,12 @@ def serve(registry, namespace, path="api", http_info=None):
                 pass
         return _h
 
+    try:
+        import heartbeats
+        heartbeats.register("api", messages.M("workshop_api_process_title"), messages.M("workshop_api_process_description"), 30)
+    except Exception:
+        pass
+
     def loop():
         from dsf.connections import CommandConnection
         from dsf.object_model import HttpEndpointType
@@ -545,8 +563,10 @@ def serve(registry, namespace, path="api", http_info=None):
                     registry.log(f"api: GET endpoint not available ({e}); POST api.describe still works")
                 wait = 5
                 while True:
-                    time.sleep(3600)
+                    _beat()
+                    time.sleep(30)  # it only waits (the handlers answer on their own); this tick is the heartbeat
             except Exception as e:
+                _beat(e)
                 msg = str(e)
                 if "ermission" in msg or "not allowed" in msg.lower():
                     registry.log(f"api: no permission for the HTTP endpoint ({msg})")

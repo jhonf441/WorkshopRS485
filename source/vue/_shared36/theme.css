@@ -1,4 +1,5 @@
-@import './family.css'; /* THE design family (design/family.css, copied by tools/build-family.js): bar, menu, tabs, cards, buttons, chips */
+@import './family.css'; /* THE design family (design/family.css, copied by tools/build-family.js): core: bar, cards, buttons, chips, notes */
+@import './family-plugins.css'; /* the rules only the plugins use (design/family-plugins.css): side menu, tabs, category filter, state dot, toast, popover. The service page does NOT import this line */
 /* Tema claro / oscuro de DWC (2026-10-10, pedido: "revisar si los plugins son
  * compatibles con el boton de DWC Tema oscuro"). Los textos tenues y el ambar
  * se escribieron para fondo oscuro; con el tema claro quedaban casi invisibles
@@ -67,12 +68,6 @@
 	--v-error-base: #ff7676;
 }
 
-/* Touch targets and small text (QA 3.7 #09, real page QA-12). DESIGN.md: nothing that is touched is less than 32 px high; the x-small
- * buttons were 20 px with a 10 px label and the icon buttons 28 px. On a touch screen (coarse pointer) 44 px. */
-:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-btn { min-height: 32px; }
-:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-btn--icon { min-width: 32px; }
-:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-chip--link { min-height: 32px; }
-@media (pointer: coarse) {
-	:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-btn, :is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-chip--link, :is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .st-item, :is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .st-fold { min-height: 44px; }
-	:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .v-btn--icon, :is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) .st-fold { min-width: 44px; }
-}
+/* Touch targets (the scale, owner 2026-11-23, FAMILIA-REDISENO.md 2): a button, a link chip or a menu entry is seen s 32 px and touched 40 px through
+ * the invisible area of family.css (::after), on any pointer (the kiosk may report a fine one); this sets only their seen height. */
+:is(.workshop-theme, .consumption-page, .rs485-page, .motors-page, .lights-page, .machine-page, .impresion-page) :is(.v-btn:not(.v-btn--icon), .v-chip--link, .st-item) { min-height: var(--wf-size-s); }

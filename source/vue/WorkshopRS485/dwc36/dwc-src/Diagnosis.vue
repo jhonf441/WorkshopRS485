@@ -2,7 +2,6 @@
 	<div>
 		<div class="text-caption dim mb-3 d-flex align-center">
 			<span>{{ $t('plugins.WorkshopRS485.diagnosis.checks_each_bus_step_by_step') }}</span>
-			<help-tip :title="ht('page_title')" :what="ht('page_what')" :why="ht('page_why')" :how="ht('page_how')" />
 		</div>
 
 		<!-- ===== un bloque por bus ===== -->
@@ -96,11 +95,11 @@
 									</span>
 									<span v-if="d.answers && d.absent" class="text-caption info--text">{{ $t('plugins.WorkshopRS485.diagnosis.it_answers_now_you_can_watch') }}</span>
 									<v-spacer />
-									<v-btn v-if="d.active && !d.absent && !d.answers" x-small text @click="$emit('absent', d.id, true)" :title="$t('plugins.WorkshopRS485.common.if_it_is_not_connected_on')">
-										<v-icon x-small left>mdi-eye-off-outline</v-icon>{{ $t('plugins.WorkshopRS485.diagnosis.mark_absent') }}
+									<v-btn v-if="d.active && !d.absent && !d.answers" small text @click="$emit('absent', d.id, true)" :title="$t('plugins.WorkshopRS485.common.if_it_is_not_connected_on')">
+										<v-icon small left>mdi-eye-off-outline</v-icon>{{ $t('plugins.WorkshopRS485.diagnosis.mark_absent') }}
 									</v-btn>
-									<v-btn v-if="d.absent" x-small text color="primary" @click="$emit('absent', d.id, false)">
-										<v-icon x-small left>mdi-eye-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.watch_again') }}
+									<v-btn v-if="d.absent" small text color="primary" @click="$emit('absent', d.id, false)">
+										<v-icon small left>mdi-eye-outline</v-icon>{{ $t('plugins.WorkshopRS485.common.watch_again') }}
 									</v-btn>
 								</div>
 							</div>
@@ -117,27 +116,26 @@
 		<say-line :text="error || ''" error class="text-caption mb-3" />
 
 		<!-- ===== barrido ===== -->
-		<v-sheet outlined rounded class="pa-3">
-			<div class="d-flex align-center flex-wrap" style="gap:8px">
-				<v-icon color="primary">mdi-radar</v-icon>
-				<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.diagnosis.search_all_addresses') }}</span><help-tip :title="ht('sweep_title')" :what="ht('sweep_what')" :why="ht('sweep_why')" :how="ht('sweep_how')" />
-			</div>
+		<section class="wf-group wf-group-divided">
+			<h4 class="wf-group-title d-flex align-center" style="gap:6px">
+				<v-icon small color="primary">mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.diagnosis.search_all_addresses') }}
+			</h4>
 			<div class="text-caption dim mt-1 mb-2">
 				{{ $t('plugins.WorkshopRS485.diagnosis.asks_address_by_address_whether_anyone') }}
 			</div>
 			<v-row dense>
 				<v-col cols="12" sm="4">
-					<v-select v-model="where" :items="optionsWhere" :label="$t('plugins.WorkshopRS485.diagnosis.where')" dense outlined hide-details :disabled="sweep.active" />
+					<wf-field id="dg-where" :label="$t('plugins.WorkshopRS485.diagnosis.where')"><v-select v-model="where" :items="optionsWhere" :aria-label="$t('plugins.WorkshopRS485.diagnosis.where')" id="dg-where" dense outlined hide-details :disabled="sweep.active" /></wf-field>
 				</v-col>
 				<v-col cols="6" sm="4">
-					<v-select v-model="baud" :items="optionsBaud" :label="$t('plugins.WorkshopRS485.common.speed')" dense outlined hide-details :disabled="sweep.active || isDuet" />
+					<wf-field id="dg-baud" :label="$t('plugins.WorkshopRS485.common.speed')"><v-select v-model="baud" :items="optionsBaud" :aria-label="$t('plugins.WorkshopRS485.common.speed')" id="dg-baud" dense outlined hide-details :disabled="sweep.active || isDuet" /></wf-field>
 				</v-col>
 				<v-col cols="6" sm="4">
-					<v-select v-model="parity" :items="optionsParity" :label="$t('plugins.WorkshopRS485.common.format')" dense outlined hide-details :disabled="sweep.active || isDuet" />
+					<wf-field id="dg-parity" :label="$t('plugins.WorkshopRS485.common.format')"><v-select v-model="parity" :items="optionsParity" :aria-label="$t('plugins.WorkshopRS485.common.format')" id="dg-parity" dense outlined hide-details :disabled="sweep.active || isDuet" /></wf-field>
 				</v-col>
-				<v-col cols="4" sm="2"><v-text-field v-model.number="since" type="number" min="1" max="247" :label="$t('plugins.WorkshopRS485.common.from')" dense outlined hide-details :disabled="sweep.active" /></v-col>
-				<v-col cols="4" sm="2"><v-text-field v-model.number="until" type="number" min="1" max="247" :label="$t('plugins.WorkshopRS485.common.to')" dense outlined hide-details :disabled="sweep.active" /></v-col>
-				<v-col cols="4" sm="3"><v-text-field v-model.number="timeoutMs" type="number" min="30" max="2000" :label="$t('plugins.WorkshopRS485.diagnosis.wait_ms')" dense outlined hide-details :disabled="sweep.active" /></v-col>
+				<v-col cols="4" sm="2"><wf-field id="dg-since" :label="$t('plugins.WorkshopRS485.common.from')"><v-text-field v-model.number="since" type="number" min="1" max="247" :aria-label="$t('plugins.WorkshopRS485.common.from')" id="dg-since" dense outlined hide-details :disabled="sweep.active" /></wf-field></v-col>
+				<v-col cols="4" sm="2"><wf-field id="dg-until" :label="$t('plugins.WorkshopRS485.common.to')"><v-text-field v-model.number="until" type="number" min="1" max="247" :aria-label="$t('plugins.WorkshopRS485.common.to')" id="dg-until" dense outlined hide-details :disabled="sweep.active" /></wf-field></v-col>
+				<v-col cols="4" sm="3"><wf-field id="dg-wait" :label="$t('plugins.WorkshopRS485.diagnosis.wait_ms')"><v-text-field v-model.number="timeoutMs" type="number" min="30" max="2000" :aria-label="$t('plugins.WorkshopRS485.diagnosis.wait_ms')" id="dg-wait" dense outlined hide-details :disabled="sweep.active" /></wf-field></v-col>
 				<v-col cols="12" sm="5" class="d-flex align-center" style="gap:8px">
 					<v-btn v-if="!sweep.active" small color="primary" :disabled="!where || !!sending || !can('rs485.sweep')" :loading="sending" @click="start()">
 						<v-icon small left>mdi-magnify-scan</v-icon>{{ $t('plugins.WorkshopRS485.diagnosis.find') }}
@@ -174,7 +172,9 @@
 					</template>
 				</div>
 			</template>
-		</v-sheet>
+		</section>
+		<!-- one help for the whole section, at the foot -->
+		<help-fold class="mt-3" :items="[{ title: ht('page_title'), what: ht('page_what'), why: ht('page_why'), how: ht('page_how') }, { title: ht('sweep_title'), what: ht('sweep_what'), why: ht('sweep_why'), how: ht('sweep_how') }]" />
 	</div>
 </template>
 
@@ -185,9 +185,10 @@ import i18n from '../../i18n'
 
 import { callService, BAUDS_T3D, does, textOf, canMixin } from './api.js'
 import { failureOf } from './session-refusal.js' // a failed call as the error it got: the sentence is computed (vue/_shared36)
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
 import LockReason from './LockReason.vue' // vue/_shared36
 import SayLine from './SayLine.vue' // vue/_shared36
+import WfField from './WfField.vue' // vue/_shared36
 
 // What each verdict says (dsf/diagnostico.py) and what to do. Fixed texts
 // so the translator finds them.
@@ -239,7 +240,7 @@ export function summaryLive(busCfg, busLive, disps, live) {
 }
 
 export default {
-	components: { SayLine, LockReason, HelpTip },
+	components: { HelpFold, SayLine, LockReason, WfField },
 	mixins: [canMixin],
 	// what the previous person read stays in no data of the screen (ESTANDAR 3.1)
 	sessionData: ['results', 'error'],

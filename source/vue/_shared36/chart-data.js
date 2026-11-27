@@ -90,3 +90,20 @@ export const REFERENCE_COLOR = '#898781';
 export function seriesColor(dark) {
 	return dark ? SERIES_COLOR.dark : SERIES_COLOR.light;
 }
+
+// The step of the time axis, in seconds: the first "nice" step that leaves as many labels as fit in the width of the axis (48 px a label of minutes,
+// 64 px one of hours or days, 7 at most); the steps go up to a month, so a phone (390 px) over days never gets labels on top of each other (2026-11-24)
+const AXIS_STEPS_S = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200, 86400, 172800, 259200, 604800, 1209600, 2592000]
+export function axisStepSeconds(rangeS, axisWidth) {
+	const target = Math.min(7, Math.max(2, Math.floor(axisWidth / (rangeS > 3600 ? 64 : 48))))
+	for (const s of AXIS_STEPS_S) if (rangeS / s <= target) return s
+	return AXIS_STEPS_S[AXIS_STEPS_S.length - 1]
+}
+
+// The label of a time tick: with a step of an hour or more only the big unit ("23h", "3d", "1d 3h"), so the labels stay short; under an hour the
+// usual compact form of `long` (the tooltip keeps the long form)
+export function axisAgoLabel(totalS, stepS, long) {
+	if (stepS >= 86400) return `${Math.round(totalS / 86400)}d`
+	if (stepS >= 3600 && totalS >= 3600) return totalS >= 86400 ? `${Math.floor(totalS / 86400)}d ${Math.round((totalS % 86400) / 3600)}h` : `${Math.round(totalS / 3600)}h`
+	return long(totalS)
+}

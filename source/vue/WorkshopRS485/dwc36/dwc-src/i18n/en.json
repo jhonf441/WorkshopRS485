@@ -544,6 +544,7 @@
 	"paramsT3d": {
 		"is_not_a_t3d_parameter_backup": "is not a T3D parameter backup",
 		"the_backup_matches_what_the_servo": "The backup matches what the servo has: nothing to change.",
+		"tap_again_to_delete": "Tap again to delete",
 		"could_not_read_the_backup": "Could not read the backup: ",
 		"could_not_save_the_backup": "Could not save the backup: ",
 		"could_not_list_the_backups": "Could not list the backups: ",
@@ -573,6 +574,7 @@
 		"does_not_report_it": "does not report it",
 		"the_servo_answers_0x5a53_it_does": "The servo answers 0x5A53: it does not have this value",
 		"on_the_servo": "On the servo",
+		"parameter": "Parameter",
 		"written_not_in_eeprom": "written, not in EEPROM",
 		"if_you_change_the_address_baud": "If you change the address, baud rate or format, the servo stops answering with the current settings: save to EEPROM, restart the servo and also change the device / bus on this page.",
 		"invalid_values_according_to_the_manual": "Invalid values according to the manual",

@@ -10,7 +10,7 @@
 			</template>
 			<template v-slot:startup>
 				<startup-panel v-if="read" plugin="WorkshopRS485" :defs="rowsStartup" :service-row="false" @action="onActionStartup">
-					<v-btn x-small text color="primary" class="mt-1" @click="tab = 2">{{ $t('plugins.WorkshopRS485.rS485.see_the_steps') }}</v-btn>
+					<v-btn small text color="primary" class="mt-1" @click="tab = 2">{{ $t('plugins.WorkshopRS485.rS485.see_the_steps') }}</v-btn>
 				</startup-panel>
 			</template>
 		</page-header>
@@ -21,6 +21,7 @@
 				<div class="st-layout">
 				<side-tabs v-model="tab" :items="tabItems" />
 				<div class="st-body">
+				<card-head :icon="tabItems[tab].icon" :title="tabItems[tab].label" />
 				<v-tabs-items v-model="tab" class="transparent">
 					<!-- ===== Dispositivos ===== -->
 					<v-tab-item>
@@ -33,16 +34,16 @@
 								<span v-else>{{ ' ' }}{{ $t('plugins.WorkshopRS485.common.never_answered') }}</span>
 							</div>
 							<div class="d-flex align-center flex-wrap mt-1" style="gap:8px">
-								<v-btn x-small outlined color="primary" @click="tab = 3"><v-icon x-small left>mdi-stethoscope</v-icon>{{ $t('plugins.WorkshopRS485.common.diagnose') }}</v-btn>
-								<v-btn v-if="p.silent.length" x-small text :loading="saving" :title="$t('plugins.WorkshopRS485.rS485.if_they_are_not_connected_on')" @click="markAbsent(p.silent.map(d => d.id), true)">
-									<v-icon x-small left>mdi-eye-off-outline</v-icon>{{ p.silent.length === 1 ? $t('plugins.WorkshopRS485.common.mark_as_absent') : $t('plugins.WorkshopRS485.rS485.mark_all_as_absent') }}
+								<v-btn small outlined color="primary" @click="tab = 3"><v-icon small left>mdi-stethoscope</v-icon>{{ $t('plugins.WorkshopRS485.common.diagnose') }}</v-btn>
+								<v-btn v-if="p.silent.length" small text :loading="saving" :title="$t('plugins.WorkshopRS485.rS485.if_they_are_not_connected_on')" @click="markAbsent(p.silent.map(d => d.id), true)">
+									<v-icon small left>mdi-eye-off-outline</v-icon>{{ p.silent.length === 1 ? $t('plugins.WorkshopRS485.common.mark_as_absent') : $t('plugins.WorkshopRS485.rS485.mark_all_as_absent') }}
 								</v-btn>
 							</div>
 						</v-alert>
 						<v-alert v-if="detected.length" dense text type="info" icon="mdi-radar" class="mb-3">
 							<div class="d-flex align-center flex-wrap" style="gap:8px">
 								<span>{{ detected.length === 1 ? $t('plugins.WorkshopRS485.rS485.one_new_device') : $t('plugins.WorkshopRS485.rS485.n_new_devices', { n: detected.length }) }}</span>
-								<v-btn x-small outlined color="primary" @click="tab = 1">{{ $t('plugins.WorkshopRS485.rS485.see_and_add') }}</v-btn>
+								<v-btn small outlined color="primary" @click="tab = 1">{{ $t('plugins.WorkshopRS485.rS485.see_and_add') }}</v-btn>
 							</div>
 						</v-alert>
 						<div v-if="!cfg.devices.length && !refusedKind" class="text-body-2 grey--text mb-3">
@@ -68,7 +69,7 @@
 						<v-sheet outlined rounded class="pa-3 mb-4 detection">
 							<div class="d-flex align-center flex-wrap" style="gap:8px">
 								<v-icon :color="det.auto ? 'primary' : 'grey'">mdi-radar</v-icon>
-								<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.rS485.automatic_detection') }}</span><help-tip :title="ht('detection_title')" :what="ht('detection_what')" :why="ht('detection_why')" :how="ht('detection_how')" />
+								<span class="text-subtitle-1 font-weight-medium">{{ $t('plugins.WorkshopRS485.rS485.automatic_detection') }}</span>
 								<v-spacer />
 								<v-btn small outlined color="primary" :loading="detecting.active" :disabled="detecting.active || !can('rs485.detect')" @click="detect()">
 									<v-icon small left>mdi-magnify-scan</v-icon>{{ $t('plugins.WorkshopRS485.rS485.search_everything_now') }}
@@ -79,6 +80,7 @@
 								<v-switch :input-value="det.add" :disabled="!det.auto" dense hide-details class="mt-1" :label="$t('plugins.WorkshopRS485.rS485.add_them_automatically_no_axis_they')" @change="saveDetection({ add: $event })" />
 							</div>
 							<lock-reason :min="reasonRole('detect')" class="mt-1" :subject="$t('plugins.WorkshopRS485.subjects.detect')" />
+								<help-fold class="mt-2" :items="[{ title: ht('detection_title'), what: ht('detection_what'), why: ht('detection_why'), how: ht('detection_how') }]" />
 							<div class="text-caption grey--text mt-2">
 								{{ $t('plugins.WorkshopRS485.rS485.detection_note', { min: Math.round(det.each_s / 60) || 1, max: det.until }) }} <b>{{ $t('plugins.WorkshopRS485.common.no_axis') }}</b>{{ $t(hasActivity ? 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you' : 'plugins.WorkshopRS485.rS485.its_faults_only_warn_until_you_no_activity') }}
 							</div>
@@ -100,8 +102,8 @@
 										<template v-if="d.detail"> &middot; {{ textOf(d, 'detail') }}</template>
 									</div>
 								</div>
-								<v-btn x-small color="primary" outlined :disabled="!can('rs485.add_detected')" :loading="busyDet === d.key" @click="addDetected(d)"><v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add') }}</v-btn>
-								<v-btn x-small text :disabled="!can('rs485.ignore_detected')" @click="ignoreDetected(d)">{{ $t('plugins.WorkshopRS485.rS485.ignore') }}</v-btn>
+								<v-btn small color="primary" outlined :disabled="!can('rs485.add_detected')" :loading="busyDet === d.key" @click="addDetected(d)"><v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.add') }}</v-btn>
+								<v-btn small text :disabled="!can('rs485.ignore_detected')" @click="ignoreDetected(d)">{{ $t('plugins.WorkshopRS485.rS485.ignore') }}</v-btn>
 							</div>
 						</v-sheet>
 
@@ -126,17 +128,17 @@
 								</div>
 								<v-chip v-if="busOfPort(p)" x-small color="success" outlined>{{ $t('plugins.WorkshopRS485.rS485.used_by_bus', { name: busOfPort(p).name }) }}</v-chip>
 								<template v-else>
-									<v-btn x-small outlined color="primary" :disabled="detecting.active || !can('rs485.detect')" :title="$t('plugins.WorkshopRS485.rS485.tries_every_speed_and_format')" @click="detect({ U: p.path })"><v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.detect') }}</v-btn>
-									<v-btn x-small text @click="addBus(p.path)">{{ $t('plugins.WorkshopRS485.rS485.create_bus_by_hand') }}</v-btn>
+									<v-btn small outlined color="primary" :disabled="detecting.active || !can('rs485.detect')" :title="$t('plugins.WorkshopRS485.rS485.tries_every_speed_and_format')" @click="detect({ U: p.path })"><v-icon small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.detect') }}</v-btn>
+									<v-btn small text @click="addBus(p.path)">{{ $t('plugins.WorkshopRS485.rS485.create_bus_by_hand') }}</v-btn>
 								</template>
 							</v-sheet>
 						</div>
 
 						<!-- buses -->
 						<div class="section-title d-flex align-center">
-							<span><v-icon small left>mdi-serial-port</v-icon>{{ $t('plugins.WorkshopRS485.rS485.buses') }}</span><help-tip :title="ht('buses_title')" :what="ht('buses_what')" :why="ht('buses_why')" :how="ht('buses_how')" />
+							<span><v-icon small left>mdi-serial-port</v-icon>{{ $t('plugins.WorkshopRS485.rS485.buses') }}</span>
 							<v-spacer />
-							<v-btn x-small text color="primary" @click="addBus()"><v-icon x-small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.another_bus') }}</v-btn>
+							<v-btn small text color="primary" @click="addBus()"><v-icon small left>mdi-plus</v-icon>{{ $t('plugins.WorkshopRS485.rS485.another_bus') }}</v-btn>
 						</div>
 						<div class="text-caption grey--text mb-2">
 							{{ $t('plugins.WorkshopRS485.rS485.bus_note') }}
@@ -157,7 +159,6 @@
 								<template v-if="busLive(b.id).error && !busLive(b.id).open"><span class="warning--text">{{ textOf(busLive(b.id), 'error') }}</span> &middot; </template>
 								{{ $t('plugins.WorkshopRS485.rS485.bus_stats', { ok: busLive(b.id).stats.ok, none: busLive(b.id).stats.without_response, crc: busLive(b.id).stats.crc }) }}
 							</div>
-
 							<!-- equipos del bus -->
 							<div class="d-flex align-center flex-wrap mt-2" style="gap:6px">
 								<span class="text-caption">{{ $t('plugins.WorkshopRS485.rS485.devices_colon') }}</span>
@@ -166,7 +167,6 @@
 								</v-chip>
 								<span v-if="!machinesOf(b.id).length" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.rS485.none') }}</span>
 							</div>
-
 							<!-- lo esencial -->
 							<v-row dense class="mt-2">
 								<v-col cols="12" sm="4"><v-text-field v-model.trim="b.name" :label="$t('plugins.WorkshopRS485.common.name')" dense outlined hide-details /></v-col>
@@ -177,19 +177,19 @@
 									</v-btn-toggle>
 								</v-col>
 								<v-col cols="12" sm="6" v-if="b.kind !== 'duet'">
-									<div class="help-tip-row"><v-combobox v-model="b.port" :items="optionsPort" :return-object="false" item-text="text" item-value="path" :label="$t('plugins.WorkshopRS485.rS485.adapter_port')" dense outlined hide-details /><help-tip :title="ht('port_title')" :what="ht('port_what')" :why="ht('port_why')" :how="ht('port_how')" /></div>
+									<div class="help-tip-row"><v-combobox v-model="b.port" :items="optionsPort" :return-object="false" item-text="text" item-value="path" :label="$t('plugins.WorkshopRS485.rS485.adapter_port')" dense outlined hide-details /></div>
 								</v-col>
 								<v-col cols="12" sm="6" v-else>
 									<v-select v-model="b.port_duet" :items="[{ text: $t('plugins.WorkshopRS485.rS485.port_1_io0'), value: 1 }, { text: $t('plugins.WorkshopRS485.rS485.port_2_io1'), value: 2 }]" :label="$t('plugins.WorkshopRS485.rS485.duet_serial_port')" dense outlined hide-details />
 								</v-col>
-								<v-col cols="6" sm="3"><div class="help-tip-row"><v-select v-model="b.baud" :items="bauds" :label="$t('plugins.WorkshopRS485.common.speed')" dense outlined hide-details /><help-tip :title="ht('baud_title')" :what="ht('baud_what')" :why="ht('baud_why')" :how="ht('baud_how')" /></div></v-col>
+								<v-col cols="6" sm="3"><div class="help-tip-row"><v-select v-model="b.baud" :items="bauds" :label="$t('plugins.WorkshopRS485.common.speed')" dense outlined hide-details /></div></v-col>
 								<v-col cols="6" sm="3"><v-select v-model="b.parity" :items="parities" :label="$t('plugins.WorkshopRS485.common.format')" dense outlined hide-details /></v-col>
 							</v-row>
 
 							<!-- buscar equipos -->
 							<div class="d-flex align-center flex-wrap mt-3" style="gap:6px">
-								<v-btn x-small outlined :loading="scanning === b.id" :disabled="!!scanning || changed(b) || newWithoutSave(b) || !can('rs485.scan')" @click="scan(b.id)">
-									<v-icon x-small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.find_devices_1_32') }}
+								<v-btn small outlined :loading="scanning === b.id" :disabled="!!scanning || changed(b) || newWithoutSave(b) || !can('rs485.scan')" @click="scan(b.id)">
+									<v-icon small left>mdi-radar</v-icon>{{ $t('plugins.WorkshopRS485.rS485.find_devices_1_32') }}
 								</v-btn>
 								<span v-if="changed(b) || newWithoutSave(b)" class="text-caption grey--text">{{ $t('plugins.WorkshopRS485.rS485.save_the_changes_to_search_with') }}</span>
 								<template v-else-if="found[b.id]">
@@ -208,7 +208,7 @@
 							<!-- avanzado -->
 							<v-expansion-panels flat class="mt-2 advanced">
 								<v-expansion-panel>
-									<v-expansion-panel-header class="px-0 py-1 text-caption"><span><v-icon x-small left>mdi-tune</v-icon>{{ $t('plugins.WorkshopRS485.rS485.advanced') }}</span><help-tip :title="ht('advanced_title')" :what="ht('advanced_what')" :why="ht('advanced_why')" :how="ht('advanced_how')" /></v-expansion-panel-header>
+									<v-expansion-panel-header class="px-0 py-1 text-caption"><span><v-icon x-small left>mdi-tune</v-icon>{{ $t('plugins.WorkshopRS485.rS485.advanced') }}</span></v-expansion-panel-header>
 									<v-expansion-panel-content>
 										<v-row dense>
 											<v-col cols="6" sm="3"><v-select v-model="b.bits_stop" :items="[1, 2]" :label="$t('plugins.WorkshopRS485.rS485.stop_bits')" dense outlined hide-details /></v-col>
@@ -227,7 +227,7 @@
 										</template>
 										<div class="d-flex mt-2">
 											<v-spacer />
-											<v-btn x-small text :color="armed === 'bus-' + b.id ? 'error' : 'grey'" :disabled="draftBuses.length < 2 || used(b.id)" @click="arm('bus-' + b.id, () => draftBuses.splice(i, 1))">
+											<v-btn small text :color="armed === 'bus-' + b.id ? 'error' : 'grey'" :disabled="draftBuses.length < 2 || used(b.id)" @click="arm('bus-' + b.id, () => draftBuses.splice(i, 1))">
 												{{ armed === 'bus-' + b.id ? $t('plugins.WorkshopRS485.rS485.tap_again_removed_on_save') : $t('plugins.WorkshopRS485.rS485.remove_bus') }}
 											</v-btn>
 										</div>
@@ -237,6 +237,7 @@
 							</v-expansion-panels>
 						</v-card>
 
+							<help-fold class="mb-3" :items="[{ title: ht('buses_title'), what: ht('buses_what'), why: ht('buses_why'), how: ht('buses_how') }, { title: ht('port_title'), what: ht('port_what'), why: ht('port_why'), how: ht('port_how') }, { title: ht('baud_title'), what: ht('baud_what'), why: ht('baud_why'), how: ht('baud_how') }, { title: ht('advanced_title'), what: ht('advanced_what'), why: ht('advanced_why'), how: ht('advanced_how') }]" />
 						<div v-if="hasChangesBuses" class="d-flex align-center flex-wrap bar-save" style="gap:8px">
 							<span class="text-caption warning--text">{{ $t('plugins.WorkshopRS485.rS485.there_are_unsaved_changes_in_the') }}</span>
 							<v-spacer />
@@ -304,9 +305,11 @@ function withDefaults(buses) {
 }
 
 import SideTabs from './SideTabs.vue'
-import HelpTip from './HelpTip.vue' // vue/_shared36
+import HelpFold from './HelpFold.vue' // vue/_shared36
+import CardHead from './CardHead.vue' // vue/_shared36
 import { sectionColor } from './section-colors.js' // the color of each section (--wf-sec)
 import LockReason from './LockReason.vue' // vue/_shared36
+import { WF_ARM_WINDOW } from './workshop-action.js' // vue/_shared36 (FASE2): the double touch time of the family, 4000 ms
 import SessionNotice from './SessionNotice.vue' // vue/_shared36
 import SayLine from './SayLine.vue' // vue/_shared36
 
@@ -315,7 +318,7 @@ export default {
 	// what the previous person read stays in no data of the page: it is read again (onSessionChange) for the one who signs in
 	sessionData: ['cfg', 'profiles', 'ports', 'draftBuses', 'dialog', 'editingNew', 'formInitial', 'found', 'msg', 'msgError', 'refused', 'read'],
 	sessionErrors: ['msg', 'msgError', 'refused'], // what a refusal or a failure said: cleared when the person signs in, out or changes role (role-mixin.js)
-	components: { SayLine, SessionNotice, LockReason, HelpTip, PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
+	components: { HelpFold, CardHead, SayLine, SessionNotice, LockReason, PageHeader, SideTabs, Dispositivo: device, DeviceEditor: DeviceEditor, StartupGuide: StartupGuide, StartupPanel: StartupPanel, Diagnostico: diagnosis },
 	data() {
 		return {
 			tab: 0,
@@ -577,7 +580,7 @@ export default {
 			}
 			this.armed = that;
 			clearTimeout(this.armedTimer);
-			this.armedTimer = setTimeout(() => { this.armed = null; }, 4000);
+			this.armedTimer = setTimeout(() => { this.armed = null; }, WF_ARM_WINDOW);
 		},
 		newItem(busId, address, type) {
 			const profile = type || 't3d';

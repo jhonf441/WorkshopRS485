@@ -1,6 +1,6 @@
 'use strict'
 
-// ONE rule for "does this screen or button work in the mode the machine is in now?" (owner request 2026-11-12, audit of the mode behaviour of every
+// ONE rule for "does this screen or button work in the mode the machine is in now?" (user request 2026-11-12, audit of the mode behaviour of every
 // plugin). Before it each plugin invented its own: Printing greyed whole pages, the Workbench hid them, Machine and Motors said nothing. The rule
 // separates three questions that were mixed in one:
 //
@@ -8,7 +8,7 @@
 //              It is a decision of the configuration, taken once; it never flickers with the mode.
 //   elsewhere  the machine uses the mode but is in another one now: the screen STAYS, for reading; what moves or heats the machine is off, with the
 //              reason written next to it (a disabled button shows no tooltip on touch screens).
-//   unknown    the machine mode is not known (the model has not arrived): the screen stays and what ACTS is off (owner rule 2026-11-10: deny what is
+//   unknown    the machine mode is not known (the model has not arrived): the screen stays and what ACTS is off (project rule 2026-11-10: deny what is
 //              not known). Reading and navigation are never blocked by it.
 //   ok         the machine is in a mode the screen needs.
 //
